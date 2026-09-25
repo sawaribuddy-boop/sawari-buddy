@@ -1,0 +1,29 @@
+{
+  "name": "sawari-buddy",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22.12 <23",
+    "pnpm": ">=10.34 <11"
+  },
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:types": "supabase gen types typescript --local --schema public > packages/types/src/database.ts",
+    "test": "vitest run",
+    "test:concurrency": "vitest run --project concurrency",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "mobile": "pnpm --filter @sawari/mobile start",
+    "admin": "pnpm --filter @sawari/admin dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "supabase": "2.118.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,15 +1,29 @@
-# SawariBuddy — Database Design (Supabase Postgres)
+# SawariBuddy — Database Design (Supabase Postgres 17)
 
-> Phase 0 design. Implemented as SQL migrations in `supabase/migrations/` from Phase 1. Names and types here are the contract; small changes will be recorded in migrations and this doc together.
+> Updated for Phase 1. **Source of truth:** `supabase/migrations/`. This document explains the design; if they ever disagree, the migrations win and this doc must be fixed.
 
-Conventions
-- Primary keys `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`.
-- Timestamps `timestamptz`, default `now()`. All business timing uses DB `now()`.
-- Money in **paise** as `bigint`. No floats for money.
-- Coordinates `double precision` (lat −90..90, lng −180..180, check constraints). No PostGIS in V1; haversine is enough.
-- Enums as Postgres `enum` types (stable, small sets), mirrored in `packages/constants`.
-- Every table has RLS **enabled**. Clients get `SELECT` through policies; **all state-changing business operations go through `SECURITY DEFINER` functions** with explicit checks. Direct `INSERT/UPDATE/DELETE` from clients is revoked except where noted.
-- Functions set `search_path = ''` and fully qualify names.
+| Migration | Contents |
+|---|---|
+| `20260926000100_schemas_enums.sql` | `private` schema, default-privilege lockdown, enums, shared helpers (`raise_error`, `haversine_m`, `set_updated_at`) |
+| `20260926000200_identity_fleet_settings.sql` | `profiles` (+ auth trigger), `drivers`, `autos`, `auto_assignments`, `stops`, `routes`, `platform_settings`, `settings_events`, caller/role helpers |
+| `20260926000300_trips_bookings_presence.sql` | `trips`, `bookings`, `driver_presence`, `trip_events`, `booking_events`, `issues`; transition guards, capacity backstop, audit triggers |
+| `20260926000400_ledger.sql` | `ledger_accounts`, `ledger_transactions`, `ledger_entries`; zero-sum + immutability triggers; posting helpers; `ledger_account_balances` view |
+| `20260926000500_business_functions.sql` | all state-changing RPCs, unreachable-driver sweep |
+| `20260926000600_read_functions.sql` | read RPCs (search, active booking, manifest, public settings, earnings) |
+| `20260926000700_rls_grants_realtime_cron.sql` | table/function privileges, RLS policies, Realtime channel authorisation + broadcast triggers, pg_cron schedule |
+
+## Conventions
+- **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
+- **Timestamps:** `timestamptz`. All business timing uses DB `now()`.
+- **Money:** integer **paise** as `bigint`, INR only. No floats for money.
+- **Coordinates:** `double precision` with range checks. No PostGIS; haversine is enough for V1.
+- **Enums:** Postgres enums, mirrored in `packages/constants`.
+- **Schemas:**
+  - `public` holds tables and client RPCs.
+  - `private` holds internal helpers. It isn't exposed through the API, and its functions aren't executable by clients except the RLS predicates.
+- **Functions** are `SECURITY DEFINER` with `set search_path = ''` and fully qualified names.
+- **Business errors** are raised with SQLSTATE `P0001`. `MESSAGE` holds a stable code (e.g. `NO_SEAT_AVAILABLE`) and `DETAIL` a human explanation. `packages/constants` maps codes to UI text.
+- **No execute by default:** functions aren't executable by `PUBLIC`/`anon`; each client RPC is granted to `authenticated` explicitly. *Note:* the default is revoked globally for the `postgres` role, so functions from extensions added later must be granted explicitly if clients need them.
 
 ---
 
@@ -17,25 +31,18 @@ Conventions
 
 ```
 auth.users 1─1 profiles ──┬── 1─1 drivers ──┬── * auto_assignments * ── autos
-                          │                 ├── 1─1 driver_presence
+                          │                 ├── 1─1 driver_presence (latest state only)
                           │                 └── * trips
-                          │
                           └── (passenger) * bookings
 
 stops 1─* routes (origin_stop_id, destination_stop_id)
-routes 1─* trips
-autos  1─* trips
-trips  1─* bookings (source APP | WALK_IN)
-trips  1─* trip_events
-bookings 1─* booking_events
-
-ledger_accounts 1─* ledger_entries *─1 ledger_transactions ──(optional ref)── bookings / trips / settlements
-drivers 1─* settlements
-issues ──(optional ref)── bookings / trips / drivers
-platform_settings (single row)
+routes 1─* trips ;  autos 1─* trips
+trips 1─* bookings (source APP | WALK_IN)      ← occupancy is derived from these rows
+trips 1─* trip_events ;  bookings 1─* booking_events
+issues ──(optional)── bookings / trips / drivers
+ledger_accounts 1─* ledger_entries *─1 ledger_transactions ──(optional)── bookings / trips
+platform_settings (single row) 1─* settings_events
 ```
-
----
 
 ## 2. Enums
 
@@ -46,399 +53,151 @@ platform_settings (single row)
 | `driver_status` | `PENDING_VERIFICATION`, `ACTIVE`, `SUSPENDED` |
 | `auto_status` | `ACTIVE`, `INACTIVE` |
 | `trip_status` | `OPEN`, `BOARDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `SUSPENDED` |
+| `trip_cancel_reason` | `DRIVER_CANCELLED`, `DRIVER_OFFLINE`, `DRIVER_UNREACHABLE`, `ADMIN_CANCELLED` |
 | `booking_source` | `APP`, `WALK_IN` |
-| `booking_status` | `PENDING`, `CONFIRMED`, `WAITING`, `BOARDED`, `COMPLETED`, `CANCELLED`, `NO_SHOW` |
-| `booking_cancel_reason` | `PASSENGER_CANCELLED`, `TRIP_CANCELLED`, `DRIVER_UNREACHABLE`, `WALK_IN_REMOVED`, `ADMIN_CANCELLED`, `HOLD_EXPIRED` |
+| `booking_status` | `CONFIRMED`, `BOARDED`, `COMPLETED`, `CANCELLED`, `NO_SHOW` |
+| `booking_cancel_reason` | `PASSENGER_CANCELLED`, `TRIP_CANCELLED`, `DRIVER_UNREACHABLE`, `WALK_IN_REMOVED`, `ADMIN_CANCELLED` |
 | `seat_preference` | `ANY`, `BACK`, `FRONT` |
-| `payment_method` | `CASH` (future: `ONLINE`, `PLATFORM_CREDIT`) |
+| `payment_method` | `CASH` (future values added with `alter type … add value`) |
 | `ledger_account_type` | `PASSENGER_CREDIT`, `DRIVER_SETTLEMENT`, `PLATFORM_REVENUE`, `PLATFORM_CASH`, `PAYMENT_CLEARING` |
-| `ledger_transaction_type` | `PAYMENT`, `BOOKING_DEBIT`, `REFUND_CREDIT`, `ADJUSTMENT`, `DRIVER_EARNING`, `PLATFORM_FEE`, `SETTLEMENT` |
-| `issue_source` | `PASSENGER`, `DRIVER`, `SYSTEM` |
-| `issue_kind` | `DRIVER_UNREACHABLE`, `TRIP_STUCK`, `BOOKING_ISSUE`, `DRIVER_BEHAVIOUR`, `PAYMENT`, `OTHER` |
-| `issue_status` | `OPEN`, `IN_REVIEW`, `RESOLVED`, `CLOSED` |
+| `ledger_entry_type` | `PAYMENT`, `BOOKING_DEBIT`, `REFUND_CREDIT`, `ADJUSTMENT`, `DRIVER_EARNING`, `PLATFORM_FEE`, `SETTLEMENT` |
+| `issue_source` / `issue_kind` / `issue_status` | see STATE_MACHINES §4 |
 
----
+## 3. Tables (key columns and constraints)
 
-## 3. Tables
+### Identity & fleet
+- **`profiles`**
+  - Columns: `id`, `role` (default `PASSENGER`), `full_name`, `phone` (E.164, unique), `email`, `status`.
+  - Created by a trigger on `auth.users`, always as `PASSENGER`.
+  - Clients can update only `full_name` and `phone` (column grant). Roles change only through `admin_set_user_role`.
+- **`drivers`**: `id` → profiles, `license_number` (unique), `status`, `verified_at` (required when `ACTIVE`).
+- **`autos`**: `registration_number` (unique, `^[A-Z0-9]{4,12}$`), `capacity` (1–8), `status`.
+- **`auto_assignments`**: which drivers may operate which autos. Unique active pair, and revoking sets `revoked_at`.
+- **`stops`**: `name` (unique among active), `lat`, `lng`, `is_active`.
+- **`routes`**:
+  - Columns: `origin_stop_id`, `destination_stop_id` (must differ; unique active pair), `fare_paise`, `display_order`, `is_active`.
+  - `approx_distance_m` is set by a trigger (haversine).
+- **`platform_settings`**: a single row (`id = 1`) with every tunable business rule (PROJECT_SPEC §7), plus cross-field checks (e.g. intervention > stale > heartbeat interval). Every change is audited into `settings_events`.
 
-### 3.1 Identity
+### Operations
+- **`trips`**
+  - Columns: `route_id`, `auto_id`, `driver_id`, `status`, snapshotted `capacity` and `fare_paise`, and lifecycle timestamps `opened_at`, `final_call_at`, **`no_show_eligible_at`**, `started_at`, `completed_at`, `cancelled_at` (+ `cancel_reason`), `suspended_at` (+ `suspended_from_status`).
+  - Check constraints tie timestamps to status (e.g. `BOARDING ⇒ final_call_at`; `final_call_at` and `no_show_eligible_at` are set together, and `no_show_eligible_at ≥ final_call_at`).
+  - Partial unique indexes: one active trip per driver, and one per auto.
+  - The `trips_guard` trigger enforces legal transitions and immutable snapshots.
+- **`bookings`**: every occupant of a trip.
+  - Columns: `code` (`SA1001`…), `trip_id`, `source`, `passenger_id` (required iff `APP`), `walk_in_label`, `seat_count`, `seat_preference` (non-binding), `status`, snapshotted `fare_per_seat_paise` / `total_fare_paise` / `platform_fee_paise`, `payment_method`, `idempotency_key` (required for **both** app bookings and walk-ins), `created_by`, lifecycle timestamps, cancel/no-show audit columns.
+  - Indexes:
+    - `unique (created_by, idempotency_key)`: idempotency;
+    - `unique (passenger_id) where status in ('CONFIRMED','BOARDED')`: one active booking per passenger;
+    - `(trip_id, status)`: occupancy.
+  - Triggers:
+    - `bookings_guard`: legal transitions and immutable fields;
+    - `bookings_capacity_guard`: a backstop that locks the trip row and rejects any write that would exceed capacity, whatever the write path;
+    - an audit trigger and a realtime broadcast trigger.
+- **`driver_presence`**: one row per driver, **updated in place** (`fillfactor = 70` for HOT updates).
+  - Columns: `is_online`, `active_trip_id`, `lat`/`lng`/`accuracy_m`/`location_at`, `last_seen_at`.
+  - No location history.
+- **`trip_events`**, **`booking_events`**: append-only audit rows (from/to status, actor, actor role, metadata), written by triggers.
+- **`issues`**: passenger, driver and system issues. A partial unique index allows only one open system issue per (trip, kind).
 
-**`profiles`**: one per auth user
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | FK `auth.users(id)` on delete cascade |
-| role | user_role | default `PASSENGER`; only admins can change (column privilege + trigger) |
-| full_name | text | not null, 1–80 chars |
-| phone | text null | E.164, unique when present |
-| email | text null | mirrored from auth for admin search |
-| status | account_status | default `ACTIVE` |
-| created_at, updated_at | timestamptz | |
+### Finance: append-only double-entry ledger
+- **`ledger_accounts`**: `(type, owner_profile_id)` unique with `nulls not distinct`. Per-person accounts have an owner; platform accounts are singletons.
+- **`ledger_transactions`**: one business event, with `type`, a **unique `idempotency_key`**, references (`booking_id`, `trip_id`, `reverses_transaction_id`), `description` and `created_by`.
+- **`ledger_entries`**: lines with `account_id`, `entry_type` and signed, non-zero `amount_paise`.
+- **Invariants:**
+  - **Σ amount per transaction = 0, with ≥ 2 lines.** This is a deferred constraint trigger, checked at commit.
+  - **No UPDATE / DELETE / TRUNCATE** on any ledger table. Triggers raise `LEDGER_IMMUTABLE`, even for superusers.
+  - **Balances are derived.** The `ledger_account_balances` view (`security_invoker`) sums the entries, and no balance is ever stored.
 
-Created by an `after insert on auth.users` trigger (role always `PASSENGER`; drivers/admins are promoted by admin actions).
+**Sign convention:** positive = value credited to the holder (the platform owes them); negative = the holder owes the platform.
 
-**`drivers`**: driver-specific data
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | FK `profiles(id)` |
-| license_number | text | unique |
-| status | driver_status | default `PENDING_VERIFICATION` |
-| verified_at | timestamptz null | |
-| created_at | timestamptz | |
-
-### 3.2 Fleet & network
-
-**`autos`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| registration_number | text | unique, upper-case normalised (e.g. `DL01AB1234`) |
-| capacity | smallint | check 1–8 |
-| model, colour | text null | display only |
-| status | auto_status | |
-| created_at, updated_at | | |
-
-**`auto_assignments`**: which drivers may operate which autos
-| column | type | notes |
-|---|---|---|
-| auto_id | uuid FK | |
-| driver_id | uuid FK | |
-| assigned_at | timestamptz | |
-| revoked_at | timestamptz null | |
-| | | unique (auto_id, driver_id) where `revoked_at is null` |
-
-**`stops`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| name | text | unique among active |
-| lat, lng | double precision | checks |
-| is_active | boolean | |
-
-**`routes`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| origin_stop_id, destination_stop_id | uuid FK stops | check origin ≠ destination; unique pair among active |
-| fare_paise | bigint | check > 0 |
-| approx_distance_m | integer null | straight-line, computed from stops at insert |
-| display_order | integer | for "Popular routes" |
-| is_active | boolean | |
-
-### 3.3 Operations
-
-**`trips`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| route_id, auto_id, driver_id | uuid FK | |
-| status | trip_status | |
-| capacity | smallint | **snapshot** of `autos.capacity` at open |
-| fare_paise | bigint | **snapshot** of `routes.fare_paise` at open |
-| opened_at | timestamptz | |
-| final_call_at | timestamptz null | set on `BOARDING` |
-| started_at, completed_at, cancelled_at | timestamptz null | |
-| cancel_reason | text null | |
-| suspended_at | timestamptz null | |
-| suspended_from_status | trip_status null | check in (`OPEN`,`BOARDING`) |
-| created_at, updated_at | | |
-
-Indexes / constraints
-- `unique (driver_id) where status in ('OPEN','BOARDING','IN_PROGRESS','SUSPENDED')`: one active trip per driver.
-- `unique (auto_id) where status in (…same…)`: one active trip per auto.
-- `index (route_id, status)`: search.
-- check: timestamps consistent with status (e.g. `status = 'IN_PROGRESS' → started_at is not null`).
-
-**`bookings`**: every occupant of a trip, app or walk-in
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| code | text | unique, `'SA' || nextval('booking_code_seq')` (e.g. `SA1001`) |
-| trip_id | uuid FK | |
-| source | booking_source | |
-| passenger_id | uuid FK profiles null | **required when `APP`, null when `WALK_IN`** (check) |
-| walk_in_label | text null | optional note for walk-ins, ≤ 40 chars |
-| seat_count | smallint | check ≥ 1 |
-| seat_preference | seat_preference | default `ANY` |
-| status | booking_status | |
-| fare_per_seat_paise | bigint | snapshot from trip |
-| total_fare_paise | bigint | `fare_per_seat_paise × seat_count` (check) |
-| platform_fee_paise | bigint | snapshot using commission at booking time (check 0 ≤ fee ≤ total) |
-| payment_method | payment_method | `CASH` in V1 |
-| idempotency_key | uuid null | required for `APP` |
-| created_by | uuid FK profiles | passenger (APP) or driver (WALK_IN) |
-| hold_expires_at | timestamptz null | only for `PENDING` (future) |
-| confirmed_at, waiting_since, boarded_at, completed_at, cancelled_at, no_show_at | timestamptz null | |
-| cancel_reason | booking_cancel_reason null | |
-| cancelled_by | uuid null | |
-| created_at, updated_at | | |
-
-Indexes / constraints
-- `unique (created_by, idempotency_key)`: idempotent booking.
-- `unique (passenger_id) where status in ('PENDING','CONFIRMED','WAITING','BOARDED')`: one active booking per passenger (A4).
-- `index (trip_id, status)`: occupancy computation.
-- `index (passenger_id, created_at desc)`: history.
-
-**`driver_presence`**: latest state only, one row per driver, updated in place
-| column | type | notes |
-|---|---|---|
-| driver_id | uuid PK FK drivers | |
-| is_online | boolean | driver intent |
-| active_trip_id | uuid FK trips null | |
-| lat, lng | double precision null | |
-| accuracy_m | real null | |
-| location_at | timestamptz null | when location last changed (server time) |
-| last_seen_at | timestamptz null | last heartbeat |
-| unreachable_issue_raised_at | timestamptz null | de-dupe system issues per outage |
-| updated_at | timestamptz | |
-
-This row is **updated**, not appended, every ~10 s. Postgres handles this fine at V1 scale. The table should get a low `fillfactor` (e.g. 70) to allow HOT updates.
-
-**`trip_events`**, **`booking_events`**: append-only audit
-| column | type |
-|---|---|
-| id | bigint identity PK |
-| trip_id / booking_id | uuid FK |
-| from_status, to_status | enum null |
-| actor_id | uuid null (null = system) |
-| actor_role | user_role null |
-| reason | text null |
-| metadata | jsonb default `{}` |
-| created_at | timestamptz |
-
-Written by triggers on status change, so no code path can forget them.
-
-### 3.4 Finance: append-only double-entry ledger
-
-**`ledger_accounts`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| type | ledger_account_type | |
-| owner_profile_id | uuid FK profiles null | passenger/driver owner; null for platform accounts |
-| created_at | | |
-| | | unique (type, owner_profile_id); platform accounts are singletons |
-
-**`ledger_transactions`**: one business event
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| type | ledger_transaction_type | primary classification of the event |
-| idempotency_key | text | **unique**, e.g. `trip_completion:booking:<id>`, `settlement:<id>` |
-| booking_id, trip_id, settlement_id | uuid null FKs | reference |
-| reverses_transaction_id | uuid null FK self | corrections |
-| description | text | |
-| created_by | uuid null | null = system |
-| created_at | timestamptz | |
-
-**`ledger_entries`**: lines
-| column | type | notes |
-|---|---|---|
-| id | bigint identity PK | |
-| transaction_id | uuid FK | |
-| account_id | uuid FK | |
-| entry_type | ledger_transaction_type | what this line represents (e.g. the `DRIVER_EARNING` line within a fare transaction) |
-| amount_paise | bigint | signed, ≠ 0 |
-| created_at | | |
-
-Invariants
-- **Σ amount_paise per transaction = 0**, enforced by a `DEFERRABLE INITIALLY DEFERRED` constraint trigger.
-- `UPDATE`/`DELETE` on all three ledger tables are revoked from every role, including via a trigger that raises, so even `service_role` can't mutate history by accident.
-- Balance of an account = `Σ amount_paise` of its entries (view `ledger_account_balances`).
-
-Sign convention: **positive = the platform owes the account holder / value credited to them**; negative = the holder owes the platform. Platform accounts use the mirror side so every transaction nets to zero.
-
-#### Postings in V1 (cash)
-
-A completed APP booking, fare ₹40, commission 10%:
+**V1 postings (cash only)**, made by `complete_trip`. There is one transaction per completed booking, with key `booking_fare:<booking_id>`. For an app fare of ₹40 at 10%:
 
 | entry_type | account | amount |
 |---|---|---|
 | `PAYMENT` (cash collected by driver) | DRIVER_SETTLEMENT(driver) | −4000 |
 | `DRIVER_EARNING` | DRIVER_SETTLEMENT(driver) | +3600 |
 | `PLATFORM_FEE` | PLATFORM_REVENUE | +400 |
-| **Σ** | | **0** |
 
-Driver settlement balance after this = −400, i.e. the driver owes the platform ₹4.
+After this posting, the driver's settlement balance is −400: the driver owes the platform its fee. Walk-ins use `walk_in_commission_bps` (default 0), so the zero fee line is skipped.
 
-Driver settles ₹4 in cash to the platform (admin records it):
+**Extensible without schema changes:** `BOOKING_DEBIT`, `REFUND_CREDIT` and `SETTLEMENT` entry types, and `PASSENGER_CREDIT`, `PLATFORM_CASH` and `PAYMENT_CLEARING` accounts, are already modelled. Later phases can support these just by adding posting functions:
+- **Prepaid bookings:** `PAYMENT` into `PAYMENT_CLEARING`, then `BOOKING_DEBIT` at completion.
+- **Refund credits:** `REFUND_CREDIT` into `PASSENGER_CREDIT`.
+- **Cash or digital settlements:** `SETTLEMENT` between `DRIVER_SETTLEMENT` and `PLATFORM_CASH`.
 
-| entry_type | account | amount |
+A `settlements` table, and `payment_method` values beyond `CASH`, will be added by migration when those flows are built. None of this is implemented in Phase 1: no payment provider, no top-ups, no prepaid payments, no refunds.
+
+## 4. Occupancy and the booking transaction
+
+`available_seats = trip.capacity − Σ seat_count of the trip's CONFIRMED and BOARDED bookings`, computed by `private.trip_occupied_seats`. There is no stored counter. App bookings and walk-ins share one table and one formula.
+
+`book_seats(trip_id, seat_count, idempotency_key, seat_preference)`:
+1. Check the caller is an active passenger. If a booking already exists with the caller's idempotency key, return it, but raise `IDEMPOTENCY_KEY_REUSED` if the parameters differ.
+2. Validate `seat_count` (1 … `max_seats_per_booking`).
+3. `select … from trips where id = $1 for update`. This **serialises every seat change on this trip**, while other trips proceed in parallel.
+4. Re-check idempotency under the lock, since a concurrent duplicate may have just committed.
+5. Check the trip is `OPEN` (`TRIP_NOT_BOOKABLE`) and the driver is reachable (`DRIVER_UNREACHABLE`), and that the passenger has no other active booking (`ALREADY_HAS_ACTIVE_BOOKING`).
+6. Recompute occupancy from the rows. If `occupied + seat_count > capacity`, raise `NO_SEAT_AVAILABLE`.
+7. Insert the booking with the fare and fee snapshot. A `unique_violation` from a cross-trip race is mapped to the right code.
+
+`add_walk_in`, `cancel_booking`, `mark_boarded`, `mark_no_show`, `remove_walk_in`, `final_call`, `start_trip`, `complete_trip` and `cancel_trip` all take the same trip row lock first. **Lock order everywhere:** trip → booking → driver_presence, which prevents deadlocks. `READ COMMITTED` is sufficient because the occupancy read happens after the lock is acquired.
+
+The `bookings_capacity_guard` trigger repeats the capacity check under the same lock on **every** insert or re-activation. So even a privileged direct write can't overbook.
+
+## 5. RPCs
+
+| Function | Caller | Purpose |
 |---|---|---|
-| `SETTLEMENT` | DRIVER_SETTLEMENT(driver) | +400 |
-| `SETTLEMENT` | PLATFORM_CASH | −400 |
+| `book_seats` | passenger | concurrency-safe, idempotent booking |
+| `cancel_booking` | passenger | `CONFIRMED` → `CANCELLED` (free in V1), idempotent |
+| `open_trip` | driver | Go Online: open a trip for an assigned auto + route |
+| `final_call` | driver | `OPEN` → `BOARDING`; sets `final_call_at`, `no_show_eligible_at` |
+| `add_walk_in` / `remove_walk_in` | driver | walk-in passengers (idempotent add) |
+| `mark_boarded` / `mark_no_show` | driver | boarding and no-show (after grace) |
+| `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish + ledger postings |
+| `cancel_trip` | driver / admin | cancel before departure or a suspended trip |
+| `resume_trip` | driver | after being unreachable |
+| `go_offline` | driver | stop being online; auto-cancels an empty trip |
+| `driver_heartbeat(lat?, lng?, accuracy?)` | driver | liveness + latest location, throttled, broadcast to `trip:<id>` |
+| `raise_issue` | passenger / driver | complaint about own booking/trip |
+| `admin_set_user_role` | admin | promote to driver/admin |
+| `search_trips(origin, destination)` | signed-in | bookable trips with server-computed `available_seats` and driver location |
+| `get_my_active_booking()` | passenger | booking + trip + auto + driver reachability/location |
+| `get_trip_manifest(trip)` | driver (own) / admin | occupants (first names only), occupancy, `no_show_allowed` |
+| `get_platform_settings_public()` | signed-in | heartbeat interval, limits, grace |
+| `driver_earnings_summary(from?, to?, driver?)` | driver (own) / admin | earnings, cash collected, trips, settlement balance |
+| `private.sweep_unreachable_drivers()` | pg_cron, every minute | suspension / auto-cancel / system issues / mark vanished drivers offline |
 
-Reports
-- **Driver earnings (period)** = Σ `DRIVER_EARNING` lines for the driver's account in the period.
-- **Settlement balance** = Σ all lines on DRIVER_SETTLEMENT(driver).
-- **Platform revenue** = Σ `PLATFORM_FEE` lines.
+## 6. Row Level Security
 
-#### Future postings (designed, not produced in V1)
-- Online prepaid booking: `PAYMENT` into PAYMENT_CLEARING, then `BOOKING_DEBIT` / `DRIVER_EARNING` (positive, platform owes driver) / `PLATFORM_FEE` at completion.
-- Cancellation / driver unreachable after prepayment: `REFUND_CREDIT` to PASSENGER_CREDIT (platform credit, not withdrawable cash). This is subject to the wallet/regulatory review before launch.
-- Payout to driver: `SETTLEMENT` from DRIVER_SETTLEMENT to PLATFORM_CASH.
-
-**`settlements`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| driver_id | uuid FK | |
-| direction | text | check in (`DRIVER_TO_PLATFORM`, `PLATFORM_TO_DRIVER`) |
-| amount_paise | bigint | > 0 |
-| method | text | `CASH` / `BANK_TRANSFER` / `UPI` (free text reference in V1) |
-| reference | text null | |
-| status | text | `RECORDED` in V1 |
-| recorded_by | uuid FK profiles (admin) | |
-| created_at | | |
-
-Recorded via `record_settlement()`, which writes the settlement row and its ledger transaction atomically.
-
-### 3.5 Support & configuration
-
-**`issues`**
-| column | type | notes |
-|---|---|---|
-| id | uuid PK | |
-| source | issue_source | |
-| kind | issue_kind | |
-| status | issue_status | |
-| raised_by | uuid null | null for SYSTEM |
-| booking_id, trip_id, driver_id | uuid null FKs | |
-| description | text | |
-| resolution_note | text null | |
-| assigned_to | uuid null (admin) | |
-| created_at, updated_at, resolved_at | | |
-
-**`platform_settings`**: single row (`id smallint PK check (id = 1)`), typed columns listed in PROJECT_SPEC §7, plus `updated_by`, `updated_at`. Changes audited to `settings_events` (old/new jsonb).
-
----
-
-## 4. Views & read functions
-
-| Name | Purpose | Access |
-|---|---|---|
-| `trip_occupancy` (view) | `trip_id, capacity, occupied_seats, available_seats`, computed from bookings | driver (own trips), admin |
-| `search_trips(origin_stop_id, destination_stop_id)` | bookable trips: `OPEN`, driver reachable, driver/auto active, `available_seats > 0`; returns auto reg, driver first name, fare, available seats, driver lat/lng + `location_at` | any authenticated passenger. `SECURITY DEFINER` so it exposes only these columns |
-| `get_my_active_booking()` | booking + trip + driver presence snapshot | passenger |
-| `ledger_account_balances` (view) | balance per account | driver (own), admin |
-| `driver_earnings_summary(from, to)` | today / period earnings, trips count, settlement balance | driver (own), admin (any) |
-| `get_platform_settings_public()` | settings clients need (intervals, max seats, grace) | authenticated |
-
----
-
-## 5. Write functions (RPCs): the only way to change state
-
-All `SECURITY DEFINER`, check `auth.uid()` and role, raise typed errors (`SQLSTATE` `P0001` with a stable `MESSAGE` code such as `NO_SEAT_AVAILABLE`), and write audit rows via triggers.
-
-| Function | Caller | Summary |
-|---|---|---|
-| `book_seats(trip_id, seat_count, seat_preference, idempotency_key)` | passenger | see §6 |
-| `cancel_booking(booking_id)` | passenger | `CONFIRMED`/`WAITING` → `CANCELLED` |
-| `open_trip(auto_id, route_id)` | driver | Go Online |
-| `final_call(trip_id)` | driver | `OPEN` → `BOARDING` |
-| `add_walk_in(trip_id, seat_count, label?)` | driver | locked, like `book_seats` |
-| `remove_walk_in(booking_id)` | driver | |
-| `mark_boarded(booking_id)` | driver | |
-| `mark_no_show(booking_id)` | driver | grace check |
-| `start_trip(trip_id)` | driver | |
-| `complete_trip(trip_id)` | driver/admin | completes bookings + posts ledger, idempotent |
-| `cancel_trip(trip_id, reason)` | driver/admin | |
-| `resume_trip(trip_id)` | driver | from `SUSPENDED` |
-| `go_offline()` | driver | fails if active trip |
-| `driver_heartbeat(lat?, lng?, accuracy_m?)` | driver | updates presence; throttled; broadcasts location to `trip:<id>` |
-| `sweep_unreachable_drivers()` | pg_cron (every minute) | suspension + system issues |
-| `record_settlement(...)`, `post_adjustment(...)` | admin | ledger |
-| `raise_issue(...)` | passenger/driver | |
-| admin CRUD | admin | via RLS-permitted table writes on reference data (stops, routes, autos, assignments) and RPCs for role changes |
-
----
-
-## 6. `book_seats`: the concurrency-critical function
-
-```sql
--- sketch, not final code
-create function public.book_seats(p_trip_id uuid, p_seat_count smallint,
-                                  p_seat_preference seat_preference, p_idempotency_key uuid)
-returns public.bookings
-language plpgsql security definer set search_path = '' as $$
-declare
-  v_uid uuid := auth.uid();
-  v_trip public.trips;
-  v_settings public.platform_settings;
-  v_occupied int;
-  v_existing public.bookings;
-  v_booking public.bookings;
-begin
-  -- 0. caller must be an ACTIVE passenger
-  -- 1. idempotency: same key → same result
-  select * into v_existing from public.bookings
-   where created_by = v_uid and idempotency_key = p_idempotency_key;
-  if found then return v_existing; end if;
-
-  select * into v_settings from public.platform_settings where id = 1;
-  -- 2. validate seat_count 1..max_seats_per_booking
-
-  -- 3. LOCK the trip row: serialises every seat change on this trip
-  select * into v_trip from public.trips where id = p_trip_id for update;
-  if not found or v_trip.status <> 'OPEN' then raise exception 'TRIP_NOT_BOOKABLE'; end if;
-
-  -- 4. driver reachability (derived, using DB time)
-  perform 1 from public.driver_presence dp
-   where dp.driver_id = v_trip.driver_id and dp.is_online
-     and dp.last_seen_at >= now() - make_interval(secs => v_settings.driver_stale_seconds);
-  if not found then raise exception 'DRIVER_UNREACHABLE'; end if;
-
-  -- 5. recompute occupancy from rows, under the lock
-  select coalesce(sum(seat_count), 0) into v_occupied from public.bookings
-   where trip_id = p_trip_id
-     and (status in ('CONFIRMED','WAITING','BOARDED')
-          or (status = 'PENDING' and hold_expires_at > now()));
-  if v_occupied + p_seat_count > v_trip.capacity then
-    raise exception 'NO_SEAT_AVAILABLE';
-  end if;
-
-  -- 6. insert (one-active-booking unique index may raise → map to ALREADY_HAS_ACTIVE_BOOKING;
-  --    a concurrent retry with the same idempotency key → unique violation → re-select and return)
-  insert into public.bookings (...) values (...) returning * into v_booking;
-  return v_booking;
-end $$;
-```
-
-Why the trip row lock: every function that changes occupancy (`book_seats`, `add_walk_in`, `cancel_booking`, `mark_no_show`, `remove_walk_in`, `final_call`, `start_trip`, `cancel_trip`) first takes `FOR UPDATE` on the same trip row, so all seat decisions on one trip are serialised while different trips proceed in parallel. `READ COMMITTED` isolation is sufficient because the occupancy read happens after acquiring the lock.
-
-Verified by an automated concurrency test (Phase 1): N parallel `book_seats` calls against one remaining seat must produce exactly one success.
-
----
-
-## 7. Row Level Security summary
-
-Helper functions (`SECURITY DEFINER`, stable): `public.auth_user_role()` (avoids the reserved `current_role`), `public.is_admin()`, `public.is_driver_of_trip(trip_id)`.
+RLS is enabled on every table. `anon` has no table or function access. Clients (`authenticated`) never write `trips`, `bookings`, `driver_presence`, events or the ledger directly.
 
 | Table | Passenger | Driver | Admin |
 |---|---|---|---|
-| profiles | own row (read, update name/phone) | own row; names of passengers on own trips via function | all |
-| drivers | — | own | all (write) |
-| autos | via `search_trips` only | assigned autos | all (write) |
-| auto_assignments | — | own | all (write) |
-| stops, routes | read active | read active | all (write) |
-| trips | trips of own bookings | own trips | all |
-| bookings | own | bookings on own trips | all |
-| driver_presence | via `search_trips` / `get_my_active_booking` / realtime broadcast only | own | all |
-| trip_events / booking_events | own bookings' events | own trips | all |
-| ledger_* | none in V1 | own accounts' entries | all (read) |
-| settlements | — | own | all |
-| issues | own raised | own raised / about own trips | all |
-| platform_settings | via public function | via public function | read/write |
+| profiles | own (update name/phone) | own | all |
+| drivers | — | own | read/insert/update |
+| autos | — | assigned autos | read/insert/update |
+| auto_assignments | — | own | read/insert/update |
+| stops, routes | active | active | all + insert/update |
+| platform_settings, settings_events | public subset via RPC | public subset via RPC | read/update, audit read |
+| trips | trips they have a booking on | own | all (writes via RPC only) |
+| bookings | own | on own trips | all (writes via RPC only) |
+| driver_presence | — (via search / active booking RPCs) | own | all |
+| trip_events / booking_events | own trips / bookings | own trips | all |
+| issues | raised by self | raised by self | all + update |
+| ledger_* | own accounts (none in V1) | own settlement account | all (read) |
 
-`service_role` is used **only** by server-side code (Next.js server actions on Vercel, Edge Functions) and never shipped to mobile or browser bundles.
+Other people's personal data is never exposed through tables. Drivers see passengers' **first names** only, via `get_trip_manifest`. Passengers see drivers' first names, auto details and location only through `search_trips` / `get_my_active_booking`.
 
-Realtime: private channels `trip:<trip_id>` authorised by RLS policies on `realtime.messages`. Only the trip's driver, passengers with an occupying booking on it, and admins can join. Passenger search-list updates use a periodic refetch of `search_trips` (every ~15 s) plus pull-to-refresh, rather than exposing all drivers' positions on a public channel.
+**Realtime:**
+- **Channels:** private broadcast channels `trip:<uuid>`.
+- **Who can join:** a policy on `realtime.messages` lets in the trip's driver, passengers holding a `CONFIRMED`/`BOARDED` booking on it, and admins.
+- **Events:** `location`, `trip_changed` and `booking_changed` (which includes `available_seats`). They are emitted from inside the database transaction, so they're delivered only if it commits.
 
----
-
-## 8. Scheduled jobs (pg_cron)
+## 7. Scheduled jobs (pg_cron)
 
 | Job | Schedule | Action |
 |---|---|---|
-| `sweep_unreachable_drivers` | every minute | suspend `OPEN`/`BOARDING` trips with occupying bookings whose driver is unseen ≥ intervention threshold; auto-cancel empty stale `OPEN` trips; raise one SYSTEM issue per outage (including `IN_PROGRESS`) |
-| `expire_pending_holds` | every minute | future prepaid flow; no-op in V1 |
-| `flag_stuck_trips` | every 15 min | `IN_PROGRESS` > 3 h → SYSTEM issue `TRIP_STUCK` (threshold configurable) |
+| `sawari_sweep_unreachable_drivers` | every minute | see STATE_MACHINES §1 |

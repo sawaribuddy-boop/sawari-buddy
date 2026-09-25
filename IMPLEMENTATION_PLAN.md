@@ -2,99 +2,86 @@
 
 Goal: a correctly engineered **mobile MVP (Android + iOS)** with a thin admin back-office. Backend correctness comes first, because the apps are only as reliable as the booking engine underneath them.
 
-Each phase ends with a demo, passing tests, a commit/PR, and your approval before the next phase starts.
+Each phase ends with passing tests, a commit/PR, and your approval before the next phase starts.
 
-| Phase | Scope | Outcome |
+| Phase | Scope | Status |
 |---|---|---|
-| **0** | Discovery & design (this) | Specs, DB design, state machines, plan ✅ |
-| **1** | Monorepo + Supabase schema + booking engine + tests | Seat/booking/trip logic proven under concurrency, no UI |
-| **2** | Presence, heartbeat, unreachable sweep, realtime channels, ledger postings, earnings | Full backend feature set proven by tests |
-| **3** | Mobile: auth + **passenger** flow (Android + iOS) | Passenger can search, book, track, cancel, view history on real phones |
-| **4** | Mobile: **driver** flow (Android + iOS) | Driver can go online, share location, manage walk-ins/boarding/no-shows, run trips, see earnings |
-| **5** | Admin web (Next.js) | Ops can manage fleet, routes, trips, bookings, issues, ledger, settings |
-| **6** | Hardening & release | Staging/prod Supabase, EAS builds → TestFlight + Play internal testing, Vercel deploy, monitoring, launch checklist |
+| **0** | Discovery & design | ✅ approved with 4 adjustments (PROJECT_SPEC §12) |
+| **1** | Monorepo, Node 22, app skeletons, shared packages, Supabase schema, booking engine, walk-ins, no-shows, presence/heartbeat, ledger foundations, RLS, seed, tests | ✅ implemented, **awaiting your approval** |
+| **2** | Backend completion: settlements + adjustments, admin RPCs, realtime client verification, backend hardening | not started |
+| **3** | Mobile: auth + **passenger** flow (Android + iOS) | not started |
+| **4** | Mobile: **driver** flow (Android + iOS), foreground location | not started |
+| **5** | Admin web (Next.js) | not started |
+| **6** | Hardening & release: hosted Supabase (SawariBuddy account), EAS builds → TestFlight + Play internal testing, Vercel | not started |
 
 ---
 
-## Phase 1: exact plan
+## Phase 1: delivered
 
-**No UI. No app dependencies. Deliverable: a local Supabase database where the booking engine is proven correct by automated tests.**
+### Repository & tooling
+- **Node and package manager:** Node 22 LTS (`.nvmrc`, `engines`, `engine-strict`), and pnpm 10.34.5 via Corepack with a hoisted node-linker.
+- **Language and CLI:** TypeScript 6.0 strict, and Supabase CLI 2.118 pinned as a devDependency.
+- **Test runner:** root `vitest.config.ts` with two projects, `unit` (packages) and `concurrency` (database).
+- **Environment:** `.env.example`, with variable names and local defaults only, no secrets.
 
-### 1.1 Repository scaffolding
-1. `.nvmrc` pinning Node **22 LTS or 24 LTS** (your approval: Q4), `package.json` (pnpm workspaces, private), `pnpm-workspace.yaml` (`apps/*`, `packages/*`), `.npmrc` (`node-linker=hoisted`), `tsconfig.base.json` (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
-2. `.env.example` (names only). Confirm `.gitignore` covers `.env*`.
-3. `packages/constants`: booking/trip/driver enums and error codes as `as const` objects + types.
-4. `packages/types`: script `pnpm db:types` → `supabase gen types typescript --local > packages/types/src/database.ts`.
-5. `packages/domain`: `haversineMeters()`, `formatApproxDistance()`, `splitFare()` preview (mirrors SQL, used for display only), with Vitest tests.
-6. `packages/validation`: zod schemas for RPC inputs (`bookSeatsInput`, `addWalkInInput`, …).
-7. Dev dependencies only: `typescript`, `vitest`, `zod`, `supabase` CLI (as devDependency, pinned), `pg` (for concurrency test). Nothing else.
+### Apps (skeletons only, no production UI)
+- **`apps/mobile`**: Expo SDK 57 / React Native 0.86, from the official blank TypeScript template.
+  - Identifiers: `com.sawaribuddy.app` for both iOS and Android.
+  - Builds verified: `expo export` produces **Android and iOS** bundles, and `expo-doctor` passes 21/21 checks.
+- **`apps/admin`**: Next.js 16.3 App Router. `next build` succeeds.
 
-### 1.2 Supabase project (local)
-1. `supabase init` → `supabase/config.toml`; enable `pg_cron` (used in Phase 2).
-2. Migrations, one concern each, in order:
-   - `0001_enums.sql`: all enums.
-   - `0002_identity.sql`: `profiles`, `drivers`, auth-user trigger, role-protection trigger, helper functions `auth_user_role()`, `is_admin()`.
-   - `0003_fleet_network.sql`: `autos`, `auto_assignments`, `stops`, `routes`.
-   - `0004_settings.sql`: `platform_settings` (single row, defaults from PROJECT_SPEC §7), `settings_events`.
-   - `0005_trips_bookings.sql`: `trips`, `bookings`, `booking_code_seq`, all partial unique indexes and check constraints, `trip_events`/`booking_events` + audit triggers.
-   - `0006_presence.sql`: `driver_presence` table (heartbeat function comes in Phase 2; Phase 1 tests set `last_seen_at` directly as a fixture).
-   - `0007_trip_functions.sql`: `open_trip`, `final_call`, `start_trip`, `complete_trip` (status part only; ledger in Phase 2), `cancel_trip`, `go_offline`.
-   - `0008_booking_functions.sql`: `book_seats`, `cancel_booking`, `add_walk_in`, `remove_walk_in`, `mark_boarded`, `mark_no_show`.
-   - `0009_read_functions.sql`: `trip_occupancy` view, `search_trips`, `get_my_active_booking`, `get_platform_settings_public`.
-   - `0010_rls.sql`: enable RLS on every table, policies per DATABASE_DESIGN §7, revoke direct writes on `trips`/`bookings`/`driver_presence`.
-3. `supabase/seed/seed.sql`: dev-only: 1 admin, 2 drivers, 3 passengers (known test passwords, **local only**), 2 autos (capacity 5 and 4), 4 stops, 3 routes (Station 1 → Dream City ₹30, etc., from the concept).
+### Shared packages
+- `@sawari/constants`: enums, error codes → messages.
+- `@sawari/types`: generated `Database` types + aliases (`pnpm db:types`).
+- `@sawari/domain`: haversine, distance/₹ formatting, fare-split preview, derived availability, countdown. Covered by unit tests.
+- `@sawari/validation`: zod schemas for RPC inputs, used for UX only.
 
-### 1.3 Tests (must all pass to finish Phase 1)
-`supabase/tests/*.sql` (pgTAP):
-- **Occupancy:** capacity 5, 2 app + 1 walk-in → available = 2; after no-show → 3; after cancel → +seat_count.
-- **Booking guards:** not `OPEN` → `TRIP_NOT_BOOKABLE`; stale driver → `DRIVER_UNREACHABLE`; seat_count > max → `SEAT_COUNT_INVALID`; second active booking → `ALREADY_HAS_ACTIVE_BOOKING`.
-- **Idempotency:** same key twice → one row, same id returned.
-- **State machine:** every allowed transition succeeds; a representative set of forbidden ones raise `INVALID_TRANSITION` (e.g. cancel after `BOARDED`, no-show before grace, start trip with `WAITING` passengers, driver cancelling an `IN_PROGRESS` trip).
-- **Snapshots:** changing auto capacity / route fare / commission after booking doesn't change existing trip/booking values.
-- **Uniqueness:** one active trip per driver and per auto.
-- **RLS:** passenger A can't read passenger B's bookings; driver can't read another driver's trip; passenger can't `UPDATE bookings` directly; non-admin can't change `profiles.role`.
-- **Audit:** each transition writes exactly one `booking_events`/`trip_events` row.
+### Database (7 migrations): see DATABASE_DESIGN.md
+- **Schema:** schemas, enums, identity, fleet, network, settings, trips, bookings, presence, audit, issues, ledger.
+- **RPCs:** the trip lifecycle, bookings, walk-ins, no-shows, heartbeat, go offline, resume, issues, reads and earnings.
+- **Safety nets:** table-level transition guards, a capacity backstop trigger, and audit triggers.
+- **Access:** RLS on every table, locked-down privileges, and Realtime private channel authorisation with broadcast triggers.
+- **Jobs:** the pg_cron unreachable-driver sweep.
 
-`supabase/tests/concurrency/book-last-seat.test.ts` (Vitest + `pg`, against local DB):
-- 20 concurrent `book_seats` by 20 passengers on a trip with 1 seat left → exactly **1** success, 19 `NO_SEAT_AVAILABLE`, final occupied = capacity.
-- Race `add_walk_in` vs `book_seats` for the last seat → exactly 1 success.
-- 10 concurrent calls with the **same** idempotency key → exactly 1 booking.
+### Seed (local only)
+- 1 admin, 3 drivers, 3 passengers, 3 autos, 4 stops and 4 routes, using names from the UI concept.
+- Every seeded account's password is `SawariDev#2026`.
 
-### 1.4 Done criteria
-- `pnpm typecheck`, `pnpm test`, `supabase test db`, and `supabase db reset` (migrations + seed from scratch) all pass.
-- Generated DB types committed.
-- DATABASE_DESIGN.md updated for any deviation.
-- Committed on branch `phase-1/booking-engine`, PR opened for review.
-
-### Out of Phase 1
-Heartbeat RPC, pg_cron sweep, realtime broadcast, ledger tables & postings, earnings, issues, all UI.
+### Tests
+- pgTAP, 5 files, 161 assertions.
+- Concurrency (Vitest), 3 tests.
+- Domain unit tests, 10.
 
 ---
 
-## Phase 2: backend completion (outline)
-`driver_heartbeat` (throttle + `realtime.send`), realtime auth policies, `sweep_unreachable_drivers` + `resume_trip` + cron schedule, issues table + `raise_issue`, ledger tables/invariants/`complete_trip` postings, `record_settlement`, `post_adjustment`, earnings functions; tests for each (including ledger zero-sum and double-completion idempotency).
+## Phase 2: backend completion (proposed)
+
+Presence, heartbeat, the sweep and ledger postings were pulled into Phase 1, so Phase 2 is smaller:
+1. **Cash settlements:** a `settlements` table plus `record_settlement` (admin records the driver paying the platform its fees), posting `SETTLEMENT` ledger lines.
+2. **Adjustments:** `post_adjustment` (admin, mandatory reason) and `reverse_transaction` (a reversing entry that references the original).
+3. **Admin RPCs:** register/verify/suspend a driver, assign/revoke autos, resolve/close issues, admin cancel of a suspended trip (already possible), dashboard stats.
+4. **Stuck trips:** a `flag_stuck_trips` job (`IN_PROGRESS` longer than a configurable limit → `TRIP_STUCK` issue).
+5. **Realtime check:** a client-side end-to-end test with supabase-js subscribing to `trip:<id>`, to verify authorisation and event delivery through the real Realtime server.
+6. **Advisors:** run the Supabase security and performance advisors against the local schema and fix any findings.
 
 ## Phase 3: mobile passenger (outline)
-Expo app scaffold (expo-router, TypeScript strict), Supabase client with SecureStore session, auth screens, role routing, route search → results (live seat counts, distance) → confirm → booking tracking via `trip:<id>` → cancel → history → raise issue. Tested on a physical Android phone and iPhone via Expo Go.
+- **Foundation:** expo-router, a Supabase client with SecureStore session storage, auth screens (email + password for development), and routing by role.
+- **Booking flow:** route search → results with live seat counts and straight-line distance → confirm (with an idempotency key per tap) → booking tracking via `trip:<id>` → cancel.
+- **Also:** history, raising an issue, and testing on a physical Android phone and iPhone via Expo Go.
 
 ## Phase 4: mobile driver (outline)
-Driver home (auto, route, earnings), Go Online/Offline, location loop + keep-awake + offline banner, current-trip screen (seat bar, app bookings, **+ Add Walk-in**, Boarded, Final call, No-show with countdown, Start/Complete/Cancel), earnings screen.
+- **Home:** driver home (auto, route, today's earnings) and Go Online / Offline.
+- **Location:** the **foreground** location loop, with keep-awake and an offline banner.
+- **Current trip:** seat bar, app bookings, **+ Add Walk-in**, Boarded, Final call, No-show with a countdown from `no_show_eligible_at`, Start / Complete / Cancel, and Resume after a suspension.
+- **Earnings:** the earnings screen.
 
 ## Phase 5: admin web (outline)
-Next.js + `@supabase/ssr`, admin guard, CRUD screens, trips/bookings views, suspended-trip resolution, issues queue, ledger/settlements, settings editor, dashboard stats.
+- **Foundation:** `@supabase/ssr`, a server-side admin guard, CRUD screens (drivers, autos, assignments, stops, routes).
+- **Operations:** trips and bookings views, suspended-trip resolution, the issues queue.
+- **Money and settings:** ledger, settlements, the settings editor, dashboard stats.
 
 ## Phase 6: release (outline)
-Supabase staging + prod projects, migrations via CI, EAS project + `eas.json` profiles, app icons/splash, store listings, privacy policy (location use), TestFlight + Play internal track, Vercel deploy, error monitoring (Sentry optional, to be approved), phone OTP switch-over (A2), wallet/regulatory review of the credit ledger before any prepaid feature.
-
----
-
-## Open questions for approval before Phase 1
-
-| # | Question | My recommendation |
-|---|---|---|
-| Q1 | Approve assumptions A1–A15 in PROJECT_SPEC §11? | Yes as written |
-| Q2 | `WAITING` = "at final call, no-show timer running" (not a waitlist)? | Yes |
-| Q3 | Auth for development: email + password now, phone OTP before launch? | Yes |
-| Q4 | Pin Node 22 LTS or 24 LTS (you have 25.9, non-LTS)? | Node 22 LTS, the safest for Expo today; can install alongside via nvm |
-| Q5 | Seed data city/stops, or should I use the concept's names (Station 1, Dream City, Gaur City, Techzone)? | Concept names for dev |
-| Q6 | Do you already have Apple Developer and Google Play Console accounts? | Needed by Phase 6, not before |
+- **Hosting:** Supabase staging + production projects under the **SawariBuddy Supabase account**, with migrations applied via CI.
+- **Mobile release:** EAS project + `eas.json` profiles, icons/splash, store listings, and a privacy policy (foreground location use). Distribute through TestFlight and the Play internal track.
+- **Admin release:** Vercel deploy.
+- **Launch readiness:** switch auth to phone OTP (A2), and a regulatory review before any prepaid or wallet feature.

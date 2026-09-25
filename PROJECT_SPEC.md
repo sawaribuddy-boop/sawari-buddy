@@ -1,6 +1,6 @@
 # SawariBuddy — Product Specification (V1)
 
-> Status: **Phase 0 draft — awaiting approval.** Items marked **[ASSUMPTION]** are decisions I made to keep V1 moving; each one is listed in §11 for sign-off.
+> Status: **Approved (Phase 0), with the four adjustments listed in §12. Phase 1 implemented.** Items marked **[ASSUMPTION]** are listed in §11.
 >
 > Companion docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE_DESIGN.md](DATABASE_DESIGN.md) · [STATE_MACHINES.md](STATE_MACHINES.md) · [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
 >
@@ -62,7 +62,7 @@ UI polish is secondary to all of the above.
 4. See **bookable trips** on that route: auto registration, driver first name, fare/seat, **available seats (server-computed)**, and approximate straight-line distance to the driver if the passenger shares location.
 5. Book → server allocates seats atomically → booking code (e.g. `SA1001`) shown.
 6. Track the booking: status, the auto's live distance, and the driver's last-seen time.
-7. Cancel while the booking is `CONFIRMED` or `WAITING` (i.e., before boarding). No cancellation fee in V1 **[A7]**.
+7. Cancel while the booking is `CONFIRMED` (i.e., before boarding). No cancellation fee in V1 **[A7]**.
 8. View booking history.
 9. Raise a complaint about a booking or trip.
 
@@ -95,7 +95,7 @@ UI polish is secondary to all of the above.
 
 ### 6.1 Occupancy (APP + WALK-IN)
 - Every person in the auto is one row in `bookings`, with `source = APP | WALK_IN`. Walk-ins are **created by the driver** and start directly in `BOARDED`.
-- A booking **occupies seats** when its status is one of `PENDING` (unexpired hold), `CONFIRMED`, `WAITING`, `BOARDED`.
+- A booking **occupies seats** when its status is `CONFIRMED` or `BOARDED`.
 - `available_seats = trip.capacity − Σ seat_count of occupying bookings on that trip`.
 - There is **no stored seat counter**. Occupancy is always derived from booking rows, inside the same transaction that changes them.
 - `trip.capacity` is snapshotted from the auto when the trip opens, so an admin editing the auto later can't affect a running trip.
@@ -114,8 +114,9 @@ UI polish is secondary to all of the above.
 See [STATE_MACHINES.md](STATE_MACHINES.md). A booking does **not** imply boarding: only the driver's "Boarded" action (or walk-in creation) sets `BOARDED`.
 
 ### 6.4 No-show
-- Grace timer starts at **Final call** (`trip.final_call_at`). `CONFIRMED` app bookings become `WAITING`.
-- The driver can mark a `WAITING` booking `NO_SHOW` only when `now() ≥ final_call_at + no_show_grace_seconds` (default **300 s**, configurable).
+- The driver taps **Final call**. The trip records `final_call_at = now()` and `no_show_eligible_at = final_call_at + no_show_grace_seconds` (default **300 s**, configurable, snapshotted at final call).
+- Passengers still expected to board **remain `CONFIRMED`**. There is no separate waiting state.
+- The driver can mark a `CONFIRMED` app booking `NO_SHOW` only when `now() ≥ no_show_eligible_at`. The server rejects earlier attempts (`GRACE_PERIOD_NOT_ELAPSED`), and the driver app can show a countdown from `no_show_eligible_at`.
 - `NO_SHOW` releases the seats immediately. Because the trip is in `BOARDING` (closed to new app bookings), a freed seat can be filled by a **walk-in** **[ASSUMPTION A8]**.
 - No penalty/fee for no-shows in V1. No-show count per passenger is derivable for later policy.
 
@@ -129,7 +130,7 @@ See [STATE_MACHINES.md](STATE_MACHINES.md). A booking does **not** imply boardin
 - A driver who comes back can **resume** a suspended trip. An admin can instead cancel it (bookings → `CANCELLED`, reason `DRIVER_UNREACHABLE`). The ledger design supports refunds/reassignment later.
 
 ### 6.6 Location
-- Driver app sends location every `location_update_interval_seconds` (default **10 s**, configurable, clients read it from settings) while **online or on an active trip**, and stops otherwise.
+- **Location updates occur only while the driver's app is active (in the foreground).** The driver app sends a heartbeat with location every `location_update_interval_seconds` (default **10 s**, configurable, read from settings) while it is in the foreground **and** the driver is online or on an active trip. It stops when the app is backgrounded or the driver goes offline. Background tracking is not part of V1 (A12).
 - Only the **latest** location is stored (one row per driver, updated in place). No per-second history table in V1.
 - Location is broadcast over Supabase Realtime to subscribers of that trip only.
 - Location freshness (`location_at`) is tracked separately from heartbeat (`last_seen_at`): a phone can have network but no GPS fix.
@@ -147,7 +148,8 @@ See [STATE_MACHINES.md](STATE_MACHINES.md). A booking does **not** imply boardin
 - Ledger postings happen at **trip completion**, one transaction per completed booking. Balances are derived by summing ledger entries; nothing is stored as a mutable balance.
 - With cash, the driver already holds the fare, so their settlement balance is typically **negative** (they owe the platform its fee). Admin records settlements.
 - Walk-in fares are recorded for driver earnings; walk-in commission uses a separate setting `walk_in_commission_bps` (default **0**) **[ASSUMPTION A11]**.
-- `REFUND_CREDIT` / `BOOKING_DEBIT` exist in the model but are not produced in V1 (nothing is prepaid, so nothing needs refunding). This is a **platform-credit ledger, not a stored-value wallet**, and passengers cannot top up.
+- **V1 is cash-only.** No Razorpay/Stripe, no wallet top-ups, no prepaid payments, no refunds.
+- `REFUND_CREDIT`, `BOOKING_DEBIT`, `SETTLEMENT` and the `PASSENGER_CREDIT` / `PAYMENT_CLEARING` / `PLATFORM_CASH` accounts already exist in the ledger model, so prepaid payments, refund credits and digital settlements can be added later without redesign. This is a **platform-credit ledger, not a stored-value wallet**.
 
 ## 7. Configurable settings (single `platform_settings` row)
 
@@ -161,7 +163,6 @@ See [STATE_MACHINES.md](STATE_MACHINES.md). A booking does **not** imply boardin
 | `driver_intervention_seconds` | 600 | suspension job |
 | `location_update_interval_seconds` | 10 | driver app |
 | `min_location_update_interval_seconds` | 3 | server-side throttle |
-| `pending_hold_seconds` | 120 | future prepaid flow (unused in V1) |
 
 ## 8. Non-goals for V1
 Google Maps / any map SDK, road ETA, routing APIs, payment gateway (Razorpay etc.), stored-value wallet, ratings & reviews, seat-number assignment, intermediate stops / partial-route fares, push notifications (in-app realtime only), trip reassignment, AWS, Redis, microservices, AI services, location history.
@@ -198,7 +199,7 @@ TypeScript strict; no unnecessary `any`; no secrets in git; env vars for configu
 | E23 | Passenger sees stale seat count in list | UI is advisory; booking re-checks under lock. Realtime refreshes counts. |
 | E24 | Suspended driver/auto | Cannot open trips; search excludes them. |
 | E25 | Admin needs to correct a wrong ledger posting | Never edit/delete; post an `ADJUSTMENT` transaction with a reason. |
-| E26 | App backgrounded by driver during trip | V1 is foreground location only **[A12]**: heartbeat stops → possibly marked unreachable. Mitigated with keep-awake on driver trip screen. |
+| E26 | App backgrounded by driver during trip | V1 is foreground-only location **[A12]**: heartbeats stop, so after 60 s the driver counts as unreachable (no new bookings) and after 10 min the trip is suspended if pre-departure. Mitigated by keeping the screen awake on the driver trip screen; **Resume trip** on return. |
 
 ## 11. Assumptions requiring approval
 
@@ -215,7 +216,14 @@ TypeScript strict; no unnecessary `any`; no secrets in git; env vars for configu
 | A9 | No map in V1; "live location" = live straight-line distance + freshness. Optionally a button to open the device's native maps app at the driver's coordinates (plain URL, no SDK/API key). | Embedded OpenStreetMap view (still no Google). |
 | A10 | V1 payment = cash to driver; ledger records it. | Wait for gateway before launch. |
 | A11 | Walk-in fares are recorded for driver earnings with 0% platform commission by default. | Charge commission on walk-ins. |
-| A12 | Driver location tracking is foreground-only in V1 (screen kept awake on trip screen); background tracking in a later phase (requires dev build + store justification). | Background tracking in V1. |
-| A13 | Booking state `WAITING` means "trip is at final call, passenger expected, no-show timer running", **not** a waitlist. | `WAITING` = waitlisted for a full auto. |
-| A14 | `PENDING` is reserved for the future prepaid flow (seat held while paying); V1 cash bookings go straight to `CONFIRMED`. | — |
+| A12 | **Approved.** Driver location tracking is foreground-only in V1: updates occur while the driver's app is active. Background tracking is a later phase. | — |
+| A13 | **Replaced.** No `WAITING` state. Lifecycle is `CONFIRMED → BOARDED → COMPLETED`, plus `CONFIRMED → CANCELLED` and `CONFIRMED → NO_SHOW`. The no-show timer uses trip timestamps `final_call_at` / `no_show_eligible_at`. | — |
+| A14 | **Replaced.** No `PENDING` state in V1 (cash-only). A future prepaid flow can add it with `alter type … add value`. | — |
 | A15 | Seed data: a few stops/routes around a sample city for development only. | Real stop list from you. |
+
+## 12. Phase 0 approval: adjustments applied
+
+1. **Node.js 22 LTS**, pinned in `.nvmrc` and `package.json` `engines` (see README).
+2. **Booking states:** `WAITING` and `PENDING` were removed. Lifecycle: `CONFIRMED → BOARDED → COMPLETED`, `CONFIRMED → CANCELLED`, `CONFIRMED → NO_SHOW`. The no-show grace uses `trips.final_call_at` and `trips.no_show_eligible_at`.
+3. **Driver location** is foreground-only. Updates occur while the driver's app is active; no background tracking.
+4. **Payments** are cash-only. No payment provider, wallet top-ups, prepaid payments or refunds; the ledger stays extensible for them.
