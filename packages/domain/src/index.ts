@@ -60,3 +60,16 @@ export function driverAvailability(
 export function secondsUntil(target: string | Date, now: Date = new Date()): number {
   return Math.max(0, Math.ceil((new Date(target).getTime() - now.getTime()) / 1000));
 }
+
+/** "Good morning" / "Good afternoon" / "Good evening" (driver home greeting, concept D1). */
+export function greeting(now: Date = new Date()): string {
+  const h = now.getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/** First word of a full name ("Priya Sharma" -> "Priya"). */
+export function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
+}

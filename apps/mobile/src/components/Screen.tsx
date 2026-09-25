@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/theme';
@@ -14,6 +14,8 @@ export interface ScreenProps {
   /** Pinned to the bottom, outside the scroll area (primary actions). */
   footer?: ReactNode;
   contentStyle?: ViewStyle;
+  /** Keep inputs and the footer above the on-screen keyboard (forms). */
+  keyboardAvoiding?: boolean;
 }
 
 export function Screen({
@@ -24,10 +26,11 @@ export function Screen({
   edges = ['top', 'bottom'],
   footer,
   contentStyle,
+  keyboardAvoiding = false,
 }: ScreenProps) {
   const inner = [padded && styles.padded, contentStyle];
-  return (
-    <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: background }]}>
+  const body = (
+    <>
       {scroll ? (
         <ScrollView contentContainerStyle={inner} keyboardShouldPersistTaps="handled">
           {children}
@@ -36,6 +39,17 @@ export function Screen({
         <View style={[styles.fill, inner]}>{children}</View>
       )}
       {footer ? <View style={styles.footer}>{footer}</View> : null}
+    </>
+  );
+  return (
+    <SafeAreaView edges={edges} style={[styles.root, { backgroundColor: background }]}>
+      {keyboardAvoiding ? (
+        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {body}
+        </KeyboardAvoidingView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   );
 }

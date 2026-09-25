@@ -66,3 +66,18 @@ describe('secondsUntil', () => {
     expect(secondsUntil('2026-09-26T09:00:00Z', now)).toBe(0);
   });
 });
+
+describe('greeting / firstName', () => {
+  it('greets by time of day', async () => {
+    const { greeting } = await import('./index');
+    expect(greeting(new Date(2026, 8, 26, 8))).toBe('Good morning');
+    expect(greeting(new Date(2026, 8, 26, 13))).toBe('Good afternoon');
+    expect(greeting(new Date(2026, 8, 26, 20))).toBe('Good evening');
+  });
+
+  it('takes the first name', async () => {
+    const { firstName } = await import('./index');
+    expect(firstName('  Priya Sharma ')).toBe('Priya');
+    expect(firstName('Raj')).toBe('Raj');
+  });
+});

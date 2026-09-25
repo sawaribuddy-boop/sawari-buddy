@@ -43,3 +43,42 @@ export const raiseIssueInput = z.object({
   p_trip_id: z.uuid().optional(),
 });
 export type RaiseIssueInput = z.infer<typeof raiseIssueInput>;
+
+// ---------------------------------------------------------------------------
+// Auth forms (email + password for development; phone OTP is a pre-launch task)
+// ---------------------------------------------------------------------------
+
+/** Mirrors supabase/config.toml [auth] minimum_password_length. */
+export const MIN_PASSWORD_LENGTH = 8;
+
+const email = z.string().trim().toLowerCase().pipe(z.email({ message: 'Enter a valid email address' }));
+
+export const signInInput = z.object({
+  email,
+  password: z.string().min(1, { message: 'Enter your password' }),
+});
+export type SignInInput = z.infer<typeof signInInput>;
+
+export const signUpInput = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(1, { message: 'Enter your name' })
+    .max(80, { message: 'Name must be 80 characters or fewer' }),
+  email,
+  password: z
+    .string()
+    .min(MIN_PASSWORD_LENGTH, { message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` })
+    .max(72, { message: 'Password must be 72 characters or fewer' }),
+});
+export type SignUpInput = z.infer<typeof signUpInput>;
+
+/** First error message per field, for showing under inputs. */
+export function fieldErrors(error: z.ZodError): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = String(issue.path[0] ?? 'form');
+    out[key] ??= issue.message;
+  }
+  return out;
+}
