@@ -2,7 +2,7 @@
   "name": "@sawari/mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -11,12 +11,19 @@
     "export:check": "expo export --platform android --platform ios --output-dir .expo-export-check"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@sawari/constants": "workspace:*",
     "@sawari/domain": "workspace:*",
     "expo": "~57.0.25",
+    "expo-constants": "~57.0.19",
+    "expo-linear-gradient": "~57.0.2",
+    "expo-linking": "~57.0.11",
+    "expo-router": "~57.0.23",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

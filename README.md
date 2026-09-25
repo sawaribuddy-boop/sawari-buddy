@@ -9,7 +9,7 @@ Shared-auto platform connecting passengers with auto drivers: **one mobile app f
 | `supabase/` | Postgres 17 migrations, RLS, RPCs, pgTAP tests, seed |
 | `packages/*` | shared `constants`, `types`, `domain`, `validation` |
 
-**Status:** Phase 1 (booking engine + skeletons) is implemented. No production UI yet.
+**Status:** Phase 1 (booking engine) is done. Phase 2 (mobile app) is in progress: Step 1, the app shell and Welcome screen, is done.
 
 ## Requirements
 
@@ -46,6 +46,16 @@ pnpm admin                   # admin skeleton on http://localhost:3100
 | Passengers | `priya@`, `neha@`, `rahul@` (all `@sawaribuddy.local`) |
 
 Secrets are never committed. Copy [.env.example](.env.example) to `.env.local` and fill in values from `pnpm exec supabase status`.
+
+## Run the mobile app on your phone (Expo Go)
+
+1. Install **Expo Go** from the App Store (iPhone) or Google Play (Android). It must support **SDK 57**, so update it if the app says the project is incompatible.
+2. Connect the phone and this Mac to the **same Wi-Fi** network.
+3. On the Mac: `nvm use && pnpm mobile`. If macOS asks whether Node may accept incoming connections, choose **Allow**.
+4. Open the app on your phone:
+   - **iPhone:** scan the QR code with the Camera app.
+   - **Android:** scan it from inside Expo Go.
+5. If the phone can't connect, check that both devices are on the same network, and that the Wi-Fi doesn't isolate devices from each other (common on office or guest Wi-Fi).
 
 ## Design docs
 
