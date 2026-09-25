@@ -1,5 +1,7 @@
 export { AppText, type AppTextProps } from './AppText';
 export { Banner, type BannerProps, type BannerTone } from './Banner';
+export { BookingCard, type BookingCardData, type BookingCardProps } from './BookingCard';
+export { BookingHistoryRow, type BookingHistoryRowData, type BookingHistoryRowProps } from './BookingHistoryRow';
 export { BrandMark } from './BrandMark';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card } from './Card';
@@ -7,7 +9,10 @@ export { Icon, type IconName } from './Icon';
 export { ListRow } from './ListRow';
 export { Screen } from './Screen';
 export { SeatBar } from './SeatBar';
+export { SeatPreferenceRadio, type SeatPreferenceRadioProps } from './SeatPreferenceRadio';
 export { Sheet } from './Sheet';
 export { StatusPill, type PillTone } from './StatusPill';
 export { Stepper } from './Stepper';
+export { StopPicker, type Stop, type StopPickerProps } from './StopPicker';
 export { TextField } from './TextField';
+export { TripCard, type TripCardData, type TripCardProps } from './TripCard';

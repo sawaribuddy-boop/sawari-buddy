@@ -76,6 +76,33 @@ export async function fetchDriverEarnings(
 }
 
 // ---------------------------------------------------------------------------
+// Passenger mutations
+// ---------------------------------------------------------------------------
+
+export async function bookSeats(
+  client: AppSupabaseClient,
+  args: {
+    tripId: string;
+    seatCount: number;
+    idempotencyKey: string;
+    seatPreference: 'ANY' | 'BACK' | 'FRONT';
+  },
+) {
+  return unwrap(
+    await client.rpc('book_seats', {
+      p_trip_id: args.tripId,
+      p_seat_count: args.seatCount,
+      p_idempotency_key: args.idempotencyKey,
+      p_seat_preference: args.seatPreference,
+    }),
+  );
+}
+
+export async function cancelBooking(client: AppSupabaseClient, bookingId: string) {
+  return unwrap(await client.rpc('cancel_booking', { p_booking_id: bookingId }));
+}
+
+// ---------------------------------------------------------------------------
 // Shared
 // ---------------------------------------------------------------------------
 

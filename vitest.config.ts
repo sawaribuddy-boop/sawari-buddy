@@ -30,6 +30,7 @@ export default defineConfig({
           name: 'integration',
           include: ['apps/mobile/src/**/*.integration.test.ts'],
           testTimeout: 30_000,
+          fileParallelism: false,
         },
       },
     ],
