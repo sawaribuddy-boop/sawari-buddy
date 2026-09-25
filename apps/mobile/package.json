@@ -17,6 +17,7 @@
     "@sawari/types": "workspace:*",
     "@sawari/validation": "workspace:*",
     "@supabase/supabase-js": "^2.117.2",
+    "@tanstack/react-query": "^5.103.2",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
     "expo-linear-gradient": "~57.0.2",

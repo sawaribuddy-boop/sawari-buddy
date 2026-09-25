@@ -640,8 +640,17 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"get_driver_home":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_my_active_booking":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"get_my_booking":
+{ Args: { "p_booking_id": string }; Returns: Json
+                           },
+"get_my_booking_history":
+{ Args: { "p_before"?: string,"p_limit"?: number }; Returns: Json
                            },
 "get_platform_settings_public":
 { Args: Record<PropertyKey, never>; Returns: Json

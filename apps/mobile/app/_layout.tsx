@@ -1,15 +1,19 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { routeGuards } from '@/features/auth/routing';
+import { queryClient } from '@/lib/queryClient';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
