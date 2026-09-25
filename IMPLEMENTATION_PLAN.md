@@ -8,7 +8,7 @@ Each phase ends with passing tests, a commit/PR, and your approval before the ne
 |---|---|---|
 | **0** | Discovery & design | ✅ approved with 4 adjustments (PROJECT_SPEC §12) |
 | **1** | Monorepo, Node 22, app skeletons, shared packages, Supabase schema, booking engine, walk-ins, no-shows, presence/heartbeat, ledger foundations, RLS, seed, tests | ✅ approved, merged to `main` |
-| **2** | **Mobile app (Android + iOS): foundation, auth, passenger flow, driver flow**, connected to the real local database (Option A) | 🚧 in progress, Step 1 done |
+| **2** | **Mobile app (Android + iOS): foundation, auth, passenger flow, driver flow**, connected to the real local database (Option A) | 🚧 in progress, Steps 1–2 done |
 | **3** | Admin web (Next.js) + admin backend: settlements, adjustments, driver onboarding, stuck-trip job | not started |
 | **4** | Hardening & release: hosted Supabase (SawariBuddy account), EAS builds → TestFlight + Play internal testing, Vercel | not started |
 ---
@@ -65,8 +65,8 @@ Decisions:
 | Step | Scope | Status |
 |---|---|---|
 | 1 | Expo Router foundation, theme, base components, `(auth)` route group shell, Welcome screen, dev design preview | ✅ done |
-| 2 | Supabase client + phone ↔ Mac connectivity (LAN), dev diagnostics | next |
-| 3 | Auth (sign up / log in / sign out, encrypted session), role-protected `(passenger)` / `(driver)` groups | |
+| 2 | Supabase client + phone ↔ Mac connectivity (LAN), dev diagnostics | ✅ done |
+| 3 | Auth (sign up / log in / sign out, encrypted session), role-protected `(passenger)` / `(driver)` groups | next |
 | 4 | Read-RPC migration (booking history/detail), pgTAP, realtime end-to-end test, regenerated types | |
 | 5 | Driver flow (foreground heartbeat, trip management, walk-ins, final call / no-show, start / complete, resume) | |
 | 6 | Passenger flow (search, available autos, idempotent booking, live status, cancel, history, issues) | |

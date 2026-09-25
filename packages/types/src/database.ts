@@ -646,6 +646,9 @@ isOneToOne: false
 "get_platform_settings_public":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"get_server_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_trip_manifest":
 { Args: { "p_trip_id": string }; Returns: Json
                            },

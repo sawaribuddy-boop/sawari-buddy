@@ -9,7 +9,7 @@ Shared-auto platform connecting passengers with auto drivers: **one mobile app f
 | `supabase/` | Postgres 17 migrations, RLS, RPCs, pgTAP tests, seed |
 | `packages/*` | shared `constants`, `types`, `domain`, `validation` |
 
-**Status:** Phase 1 (booking engine) is done. Phase 2 (mobile app) is in progress: Step 1, the app shell and Welcome screen, is done.
+**Status:** Phase 1 (booking engine) is done. Phase 2 (mobile app) is in progress: Step 1 (app shell) and Step 2 (the local Supabase connection over Wi-Fi) are done.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ corepack enable              # pnpm 10.34.5
 pnpm install
 pnpm db:start                # local Supabase on ports 55321-55324; applies migrations + seed
 pnpm db:test                 # pgTAP database tests
-pnpm test                    # unit + concurrency tests (needs db:start)
+pnpm test                    # unit + concurrency + LAN integration tests (needs db:start and mobile:env)
 pnpm typecheck
 pnpm mobile                  # Expo dev server (scan the QR with Expo Go)
 pnpm admin                   # admin skeleton on http://localhost:3100
@@ -51,11 +51,23 @@ Secrets are never committed. Copy [.env.example](.env.example) to `.env.local` a
 
 1. Install **Expo Go** from the App Store (iPhone) or Google Play (Android). It must support **SDK 57**, so update it if the app says the project is incompatible.
 2. Connect the phone and this Mac to the **same Wi-Fi** network.
-3. On the Mac: `nvm use && pnpm mobile`. If macOS asks whether Node may accept incoming connections, choose **Allow**.
+3. On the Mac:
+   ```bash
+   nvm use
+   pnpm db:start        # local Supabase (API on port 55321)
+   pnpm mobile:env      # writes apps/mobile/.env.local with this Mac's LAN IP + the public anon key
+   pnpm mobile          # Expo dev server; shows a QR code
+   ```
+   If macOS asks whether Node may accept incoming connections, choose **Allow**.
 4. Open the app on your phone:
-   - **iPhone:** scan the QR code with the Camera app.
+   - **iPhone:** scan the QR code with the Camera app, and allow **Local Network** access when Expo Go asks.
    - **Android:** scan it from inside Expo Go.
-5. If the phone can't connect, check that both devices are on the same network, and that the Wi-Fi doesn't isolate devices from each other (common on office or guest Wi-Fi).
+5. On the Welcome screen, tap **Connection check** (development only). All three checks should say **Pass**.
+6. If the Mac's IP changes (a different network, or after a router restart), re-run `pnpm mobile:env` and restart `pnpm mobile`.
+
+If the phone can't connect, check that both devices are on the same network, and that the Wi-Fi doesn't isolate devices from each other (common on office or guest Wi-Fi).
+
+`apps/mobile/.env.local` is git-ignored and holds **public values only**. `mobile:env` refuses to write any key other than the anon key, and the app refuses to start its Supabase client with a service-role or secret key.
 
 ## Design docs
 

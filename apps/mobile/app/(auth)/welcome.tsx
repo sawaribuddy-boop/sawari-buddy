@@ -53,13 +53,28 @@ export default function WelcomeScreen() {
           </Link>
 
           {__DEV__ ? (
-            <Link href="/dev/components" asChild>
-              <Pressable accessibilityRole="link" hitSlop={8}>
-                <AppText variant="caption" color="rgba(255,255,255,0.5)" align="center">
-                  Design preview (development only)
-                </AppText>
-              </Pressable>
-            </Link>
+            <View style={styles.devLinks}>
+              <Link href="/dev/connection" asChild>
+                <Pressable accessibilityRole="link" hitSlop={8}>
+                  <AppText variant="caption" color="rgba(255,255,255,0.5)">
+                    Connection check
+                  </AppText>
+                </Pressable>
+              </Link>
+              <AppText variant="caption" color="rgba(255,255,255,0.3)">
+                ·
+              </AppText>
+              <Link href="/dev/components" asChild>
+                <Pressable accessibilityRole="link" hitSlop={8}>
+                  <AppText variant="caption" color="rgba(255,255,255,0.5)">
+                    Design preview
+                  </AppText>
+                </Pressable>
+              </Link>
+              <AppText variant="caption" color="rgba(255,255,255,0.3)">
+                (dev only)
+              </AppText>
+            </View>
           ) : null}
         </View>
       </SafeAreaView>
@@ -117,6 +132,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   loginLink: { paddingVertical: spacing.xs },
+  devLinks: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
   loginStrong: { fontWeight: '700', textDecorationLine: 'underline' },
 
   scene: { ...StyleSheet.absoluteFill, justifyContent: 'flex-start', paddingTop: '22%' },

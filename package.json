@@ -16,7 +16,9 @@
     "test:concurrency": "vitest run --project concurrency",
     "typecheck": "pnpm -r --parallel typecheck",
     "mobile": "pnpm --filter @sawari/mobile start",
-    "admin": "pnpm --filter @sawari/admin dev"
+    "admin": "pnpm --filter @sawari/admin dev",
+    "mobile:env": "node scripts/dev/mobile-env.mjs",
+    "test:integration": "vitest run --project integration"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",

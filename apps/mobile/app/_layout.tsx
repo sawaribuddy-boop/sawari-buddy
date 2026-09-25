@@ -11,6 +11,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="dev/components" options={{ headerShown: true, title: 'Design preview' }} />
+        <Stack.Screen name="dev/connection" options={{ headerShown: true, title: 'Connection check' }} />
       </Stack>
     </>
   );
