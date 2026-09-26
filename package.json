@@ -18,13 +18,15 @@
     "mobile": "pnpm --filter @sawari/mobile start",
     "admin": "pnpm --filter @sawari/admin dev",
     "mobile:env": "node scripts/dev/mobile-env.mjs",
-    "test:integration": "vitest run --project integration"
+    "test:integration": "vitest run --project integration",
+    "simulate:driver": "tsx scripts/dev/simulate-driver.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0",
     "supabase": "2.118.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.0.2"
   }

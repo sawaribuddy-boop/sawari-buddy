@@ -10,8 +10,11 @@ select ok((public.get_server_status() ->> 'server_time')::timestamptz is not nul
 select is((select array_agg(k order by k) from jsonb_object_keys(public.get_server_status()) k),
           array['ok', 'server_time', 'service'], 'returns only ok, service and server_time');
 select throws_ok('select count(*) from public.trips', '42501', null, 'anon still cannot read tables');
-select throws_ok(format('select public.search_trips(%L, %L)', gen_random_uuid(), gen_random_uuid()), '42501', null,
-                 'anon still cannot call business RPCs');
+-- Postgres 17.6/aarch64 SIGSEGV on unauthorised SECURITY DEFINER calls via throws_ok.
+reset role;
+select ok(NOT has_function_privilege('anon', 'public.search_trips(uuid, uuid)', 'EXECUTE'),
+          'anon still cannot call business RPCs');
+set local role anon;
 
 reset role;
 set local role authenticated;

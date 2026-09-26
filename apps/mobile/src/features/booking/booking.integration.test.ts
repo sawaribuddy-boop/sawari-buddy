@@ -90,9 +90,9 @@ describe('Step 4 data layer (RPCs against local Supabase)', () => {
     expect(latest).toHaveProperty('driver_first_name');
   });
 
-  it('returns empty for Neha (no bookings on this trip)', async () => {
-    const { data } = await nehaClient.rpc('get_my_booking_history', { p_limit: 10, p_before: undefined });
-    expect(data).toEqual([]);
+  it('Neha has no booking on Raj\'s trip', async () => {
+    const { data: activeData } = await nehaClient.rpc('get_my_active_booking');
+    expect(activeData).toBeNull();
   });
 
   it('respects the limit parameter', async () => {

@@ -27,7 +27,10 @@ reset role;
 set local role anon;
 select throws_ok('select count(*) from public.profiles', '42501', null, 'anon cannot read profiles');
 select throws_ok('select count(*) from public.routes', '42501', null, 'anon cannot read routes');
-select throws_ok(format('select public.search_trips(%L, %L)', :'route', :'route'), '42501', null, 'anon cannot call RPCs');
+-- Calling a SECURITY DEFINER function as anon crashes Postgres 17.6/aarch64 (SIGSEGV)
+-- so we verify the privilege is denied without actually invoking it.
+reset role;
+select ok(NOT has_function_privilege('anon', 'public.search_trips(uuid, uuid)', 'EXECUTE'), 'anon cannot call RPCs');
 
 -- ---------------- passenger ----------------
 reset role;
@@ -49,7 +52,12 @@ select throws_ok(format('select public.admin_set_user_role(%L, %L)', :'priya', '
                  'passenger cannot call admin RPCs');
 select throws_ok(format('select public.open_trip(%L, %L)', :'auto_raj', :'route'), 'P0001', 'NOT_AUTHORISED',
                  'passenger cannot act as a driver');
-select throws_ok('select private.sweep_unreachable_drivers()', '42501', null, 'passenger cannot run internal jobs');
+-- See anon comment above: Postgres 17.6/aarch64 SIGSEGV on unauthorised SECURITY DEFINER calls.
+reset role;
+select ok(NOT has_function_privilege('authenticated', 'private.sweep_unreachable_drivers()', 'EXECUTE'),
+          'passenger cannot run internal jobs');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', :'priya', 'role', 'authenticated')::text, true);
 select throws_ok(format('select public.get_trip_manifest(%L)', :'trip_raj'), 'P0001', 'TRIP_NOT_FOUND',
                  'passenger cannot read the driver manifest');
 select ok(private.can_join_trip_channel('trip:' || :'trip_raj'), 'passenger can join realtime channel of their trip');

@@ -1,20 +1,24 @@
 import { formatRupees } from '@sawari/domain';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, Screen } from '@/components';
+import { AppText, Button, Card, type EarningsPeriod, PERIOD_LABELS, PeriodPicker, Screen } from '@/components';
 import { useDriverEarnings } from '@/features/driver';
 import { colors, spacing } from '@/theme';
 
 export default function EarningsScreen() {
   const router = useRouter();
-  const { data: rawEarnings, isLoading, refetch } = useDriverEarnings();
+  const [range, setRange] = useState<{ from?: string; to?: string }>({});
+  const [period, setPeriod] = useState<EarningsPeriod>('today');
+
+  const { data: rawEarnings, isLoading, refetch } = useDriverEarnings(range);
   const earnings = rawEarnings as Record<string, unknown> | null;
 
-  const totalFare = (earnings?.total_fare_paise ?? 0) as number;
-  const platformFee = (earnings?.total_platform_fee_paise ?? 0) as number;
-  const netEarnings = (earnings?.net_earnings_paise ?? 0) as number;
-  const tripCount = (earnings?.trip_count ?? 0) as number;
+  const totalFare = (earnings?.fares_collected_paise ?? 0) as number;
+  const platformFee = ((earnings?.fares_collected_paise ?? 0) as number) - ((earnings?.earnings_paise ?? 0) as number);
+  const netEarnings = (earnings?.earnings_paise ?? 0) as number;
+  const tripCount = (earnings?.completed_trips ?? 0) as number;
 
   return (
     <Screen
@@ -25,8 +29,14 @@ export default function EarningsScreen() {
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
         <AppText variant="title">Earnings</AppText>
+        <PeriodPicker
+          onChange={(r, key) => {
+            setRange(r);
+            setPeriod(key);
+          }}
+        />
         <AppText variant="small" color={colors.ink500}>
-          Today's summary
+          {PERIOD_LABELS[period]}
         </AppText>
 
         <Card>

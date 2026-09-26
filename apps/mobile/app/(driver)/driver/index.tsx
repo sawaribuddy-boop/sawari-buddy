@@ -35,7 +35,7 @@ type DriverHomeData = {
     bookings: Array<Record<string, unknown>>;
   } | null;
   auto: { id: string; registration_number: string; model: string; colour: string; capacity: number } | null;
-  earnings: { total_fare_paise: number; total_platform_fee_paise: number; net_earnings_paise: number; trip_count: number } | null;
+  earnings: { earnings_paise: number; fares_collected_paise: number; completed_trips: number; settlement_balance_paise: number } | null;
   server_time: string;
 };
 
@@ -301,11 +301,11 @@ export default function DriverHomeScreen() {
                   Today's earnings
                 </AppText>
                 <AppText variant="heading" color={colors.green700}>
-                  {formatRupees((home.earnings as Record<string, unknown>).net_earnings_paise as number)}
+                  {formatRupees((home.earnings as Record<string, unknown>).earnings_paise as number)}
                 </AppText>
               </View>
               <AppText variant="small" color={colors.ink500}>
-                {(home.earnings as Record<string, unknown>).trip_count as number} trips
+                {(home.earnings as Record<string, unknown>).completed_trips as number} trips
               </AppText>
             </View>
             <Button
