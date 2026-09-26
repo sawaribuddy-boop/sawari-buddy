@@ -4,12 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
+import { useKeepAwake } from 'expo-keep-awake';
+
 import {
   AppText,
   Banner,
   Button,
   Card,
   Icon,
+  OfflineBanner,
   Screen,
   SeatBar,
   Sheet,
@@ -46,6 +49,7 @@ type Booking = {
 };
 
 export default function TripScreen() {
+  useKeepAwake();
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
@@ -189,6 +193,8 @@ export default function TripScreen() {
     >
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+
+        <OfflineBanner />
 
         <View style={styles.headerRow}>
           <View style={styles.flex}>

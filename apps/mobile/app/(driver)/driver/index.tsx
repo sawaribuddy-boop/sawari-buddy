@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, ListRow, Screen, SeatBar, StatusPill } from '@/components';
+import { AppText, Banner, Button, Card, Icon, ListRow, OfflineBanner, Screen, SeatBar, StatusPill } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import {
   useCancelTrip,
@@ -130,6 +130,8 @@ export default function DriverHomeScreen() {
             tone={isOnline ? 'success' : 'neutral'}
           />
         </View>
+
+        <OfflineBanner />
 
         {restriction ? (
           <Banner tone="danger" title={restriction.title} message={restriction.message} />

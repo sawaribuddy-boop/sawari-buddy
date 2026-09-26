@@ -1,3 +1,4 @@
+import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
@@ -37,6 +38,14 @@ export function useHeartbeat(enabled: boolean) {
 
   const tick = useCallback(async () => {
     if (!mountedRef.current || !supabase) return;
+
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected === false || netState.isInternetReachable === false) {
+      if (mountedRef.current) {
+        timerRef.current = setTimeout(() => void tick(), intervalRef.current * 1000);
+      }
+      return;
+    }
 
     let lat: number | undefined;
     let lng: number | undefined;

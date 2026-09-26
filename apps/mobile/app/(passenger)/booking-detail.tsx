@@ -1,9 +1,9 @@
 import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode } from '@sawari/constants';
-import { firstName as getFirstName } from '@sawari/domain';
+import { firstName as getFirstName, formatTimeAgo } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, BookingCard, type BookingCardData, Button, Screen } from '@/components';
+import { AppText, Banner, BookingCard, type BookingCardData, Button, OfflineBanner, Screen } from '@/components';
 import { useCancelBooking, useMyActiveBooking, useMyBooking } from '@/features/booking';
 import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
@@ -89,8 +89,22 @@ export default function BookingDetailScreen() {
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
 
+        <OfflineBanner />
+
         {justBooked === '1' ? (
           <Banner tone="success" title="Booking Confirmed!" message="Your seats have been reserved." />
+        ) : null}
+
+        {isActive && driver?.reachable === false ? (
+          <Banner
+            tone="warning"
+            title="Driver may be unreachable"
+            message={
+              driver.last_seen_at
+                ? `Last seen ${formatTimeAgo(driver.last_seen_at as string)}`
+                : 'The driver has not been seen recently.'
+            }
+          />
         ) : null}
 
         {cancelMutation.isError ? (

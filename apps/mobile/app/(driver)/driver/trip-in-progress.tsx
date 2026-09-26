@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, Screen, SeatBar, StatusPill } from '@/components';
+import { useKeepAwake } from 'expo-keep-awake';
+
+import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, SeatBar, StatusPill } from '@/components';
 import { useCompleteTrip, useDriverHome } from '@/features/driver';
 import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
@@ -21,6 +23,7 @@ type Booking = {
 };
 
 export default function TripInProgressScreen() {
+  useKeepAwake();
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
@@ -79,6 +82,8 @@ export default function TripInProgressScreen() {
     >
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+
+        <OfflineBanner />
 
         <View style={styles.heroCard}>
           <Icon name="steering" color={colors.white} size={32} />

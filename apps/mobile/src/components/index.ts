@@ -9,6 +9,7 @@ export { Icon, type IconName } from './Icon';
 export { ListRow } from './ListRow';
 export { ManifestRow, type ManifestRowProps } from './ManifestRow';
 export { NoShowCountdown, type NoShowCountdownProps } from './NoShowCountdown';
+export { OfflineBanner } from './OfflineBanner';
 export { Screen } from './Screen';
 export { SeatBar } from './SeatBar';
 export { SeatPreferenceRadio, type SeatPreferenceRadioProps } from './SeatPreferenceRadio';

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Screen, type TripCardData, TripCard } from '@/components';
+import { AppText, Banner, Button, OfflineBanner, Screen, type TripCardData, TripCard } from '@/components';
 import { useSearchTrips, useStops } from '@/features/trip';
 import { colors, spacing } from '@/theme';
 
@@ -35,6 +35,7 @@ export default function SearchResultsScreen() {
           size="md"
           onPress={() => router.back()}
         />
+        <OfflineBanner />
         <View style={styles.titleArea}>
           <AppText variant="heading">
             {originName} → {destName}

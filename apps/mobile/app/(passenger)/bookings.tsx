@@ -2,7 +2,7 @@ import type { BookingStatus } from '@sawari/constants';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, type BookingHistoryRowData, BookingHistoryRow, Screen } from '@/components';
+import { AppText, Banner, type BookingHistoryRowData, BookingHistoryRow, OfflineBanner, Screen } from '@/components';
 import { useMyBookingHistory } from '@/features/booking';
 import { colors, spacing } from '@/theme';
 
@@ -27,6 +27,7 @@ export default function BookingsScreen() {
     <Screen edges={['top']} padded={false}>
       <View style={styles.header}>
         <AppText variant="title">My bookings</AppText>
+        <OfflineBanner />
       </View>
 
       {isLoading ? (

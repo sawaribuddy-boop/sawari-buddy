@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, Screen, Stepper, StopPicker } from '@/components';
+import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, Stepper, StopPicker } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useMyActiveBooking } from '@/features/booking';
 import { usePlatformSettings, useRoutes, useStops } from '@/features/trip';
@@ -49,6 +49,8 @@ export default function BookScreen() {
   return (
     <Screen scroll edges={['top']}>
       <View style={styles.body}>
+        <OfflineBanner />
+
         <AppText variant="small" color={colors.ink500}>
           Hi {account ? firstName(account.fullName) : 'there'}
         </AppText>

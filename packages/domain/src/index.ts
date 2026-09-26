@@ -73,3 +73,16 @@ export function greeting(now: Date = new Date()): string {
 export function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
+
+/** Relative time label for a timestamp: "just now", "3 min ago", "2 hr ago", "1 day ago". */
+export function formatTimeAgo(isoString: string | Date, now: Date = new Date()): string {
+  const diffMs = now.getTime() - new Date(isoString).getTime();
+  const seconds = Math.max(0, Math.floor(diffMs / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
