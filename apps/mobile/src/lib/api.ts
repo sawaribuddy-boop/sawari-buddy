@@ -1,7 +1,11 @@
 // Typed wrappers around Supabase RPCs. Each returns the parsed result or throws.
 // Hooks (useXxx) consume these; screens never call RPCs directly.
 
+import type { Database } from '@sawari/types';
+
 import type { AppSupabaseClient } from './supabase';
+
+type TripCancelReason = Database['public']['Enums']['trip_cancel_reason'];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,6 +104,77 @@ export async function bookSeats(
 
 export async function cancelBooking(client: AppSupabaseClient, bookingId: string) {
   return unwrap(await client.rpc('cancel_booking', { p_booking_id: bookingId }));
+}
+
+// ---------------------------------------------------------------------------
+// Driver mutations
+// ---------------------------------------------------------------------------
+
+export async function openTrip(client: AppSupabaseClient, autoId: string, routeId: string) {
+  return unwrap(await client.rpc('open_trip', { p_auto_id: autoId, p_route_id: routeId }));
+}
+
+export async function finalCall(client: AppSupabaseClient, tripId: string) {
+  return unwrap(await client.rpc('final_call', { p_trip_id: tripId }));
+}
+
+export async function startTrip(client: AppSupabaseClient, tripId: string) {
+  return unwrap(await client.rpc('start_trip', { p_trip_id: tripId }));
+}
+
+export async function completeTrip(client: AppSupabaseClient, tripId: string) {
+  return unwrap(await client.rpc('complete_trip', { p_trip_id: tripId }));
+}
+
+export async function cancelTrip(client: AppSupabaseClient, tripId: string, reason?: TripCancelReason) {
+  return unwrap(await client.rpc('cancel_trip', { p_trip_id: tripId, p_reason: reason }));
+}
+
+export async function resumeTrip(client: AppSupabaseClient, tripId: string) {
+  return unwrap(await client.rpc('resume_trip', { p_trip_id: tripId }));
+}
+
+export async function goOffline(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('go_offline'));
+}
+
+export async function driverHeartbeat(
+  client: AppSupabaseClient,
+  args: { lat?: number; lng?: number; accuracyM?: number } = {},
+) {
+  return unwrap(
+    await client.rpc('driver_heartbeat', {
+      p_lat: args.lat,
+      p_lng: args.lng,
+      p_accuracy_m: args.accuracyM,
+    }),
+  );
+}
+
+export async function addWalkIn(
+  client: AppSupabaseClient,
+  args: { tripId: string; seatCount: number; idempotencyKey: string; label?: string },
+) {
+  return unwrap(
+    await client.rpc('add_walk_in', {
+      p_trip_id: args.tripId,
+      p_seat_count: args.seatCount,
+      p_idempotency_key: args.idempotencyKey,
+      p_label: args.label,
+    }),
+  );
+}
+
+export async function removeWalkIn(client: AppSupabaseClient, bookingId: string) {
+  return unwrap(await client.rpc('remove_walk_in', { p_booking_id: bookingId }));
+}
+
+export async function markBoarded(client: AppSupabaseClient, bookingId: string) {
+  return unwrap(await client.rpc('mark_boarded', { p_booking_id: bookingId }));
+}
+
+export async function markNoShow(client: AppSupabaseClient, bookingId: string) {
+  return unwrap(await client.rpc('mark_no_show', { p_booking_id: bookingId }));
 }
 
 // ---------------------------------------------------------------------------
