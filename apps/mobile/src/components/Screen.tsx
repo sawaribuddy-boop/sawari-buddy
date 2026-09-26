@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type RefreshControlProps, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/theme';
@@ -16,6 +16,7 @@ export interface ScreenProps {
   contentStyle?: ViewStyle;
   /** Keep inputs and the footer above the on-screen keyboard (forms). */
   keyboardAvoiding?: boolean;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 export function Screen({
@@ -27,12 +28,13 @@ export function Screen({
   footer,
   contentStyle,
   keyboardAvoiding = false,
+  refreshControl,
 }: ScreenProps) {
   const inner = [padded && styles.padded, contentStyle];
   const body = (
     <>
       {scroll ? (
-        <ScrollView contentContainerStyle={inner} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={inner} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
           {children}
         </ScrollView>
       ) : (
