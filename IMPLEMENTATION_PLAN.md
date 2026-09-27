@@ -8,7 +8,7 @@ Each phase ends with passing tests, a commit/PR, and your approval before the ne
 |---|---|---|
 | **0** | Discovery & design | ✅ approved with 4 adjustments (PROJECT_SPEC §12) |
 | **1** | Monorepo, Node 22, app skeletons, shared packages, Supabase schema, booking engine, walk-ins, no-shows, presence/heartbeat, ledger foundations, RLS, seed, tests | ✅ approved, merged to `main` |
-| **2** | **Mobile app (Android + iOS): foundation, auth, passenger flow, driver flow**, connected to the real local database (Option A) | 🚧 in progress, Steps 1–2 done |
+| **2** | **Mobile app (Android + iOS): foundation, auth, passenger flow, driver flow**, connected to the real local database (Option A) | ✅ approved, merged to `main` |
 | **3** | Admin web (Next.js) + admin backend: settlements, adjustments, driver onboarding, stuck-trip job | not started |
 | **4** | Hardening & release: hosted Supabase (SawariBuddy account), EAS builds → TestFlight + Play internal testing, Vercel | not started |
 ---
@@ -44,10 +44,16 @@ Each phase ends with passing tests, a commit/PR, and your approval before the ne
 - 1 admin, 3 drivers, 3 passengers, 3 autos, 4 stops and 4 routes, using names from the UI concept.
 - Every seeded account's password is `SawariDev#2026`.
 
-### Tests
+### Tests (Phase 1)
 - pgTAP, 5 files, 161 assertions.
 - Concurrency (Vitest), 3 tests.
 - Domain unit tests, 10.
+
+### Tests (Phase 2 cumulative)
+- pgTAP, 7 files, 208 assertions.
+- Concurrency (Vitest), 3 tests.
+- Vitest unit, 16 files, 119 tests (domain, routing, queryKeys, auth errors, API wrappers, period picker).
+- Integration, 2 files (earnings period, booking).
 
 ---
 
@@ -66,12 +72,12 @@ Decisions:
 |---|---|---|
 | 1 | Expo Router foundation, theme, base components, `(auth)` route group shell, Welcome screen, dev design preview | ✅ done |
 | 2 | Supabase client + phone ↔ Mac connectivity (LAN), dev diagnostics | ✅ done |
-| 3 | Auth (sign up / log in / sign out, encrypted session), role-protected `(passenger)` / `(driver)` groups | next |
-| 4 | Read-RPC migration (booking history/detail), pgTAP, realtime end-to-end test, regenerated types | |
-| 5 | Driver flow (foreground heartbeat, trip management, walk-ins, final call / no-show, start / complete, resume) | |
-| 6 | Passenger flow (search, available autos, idempotent booking, live status, cancel, history, issues) | |
-| 7 | Earnings, profiles, offline / unreachable banners, `scripts/dev/simulate-driver.ts` | |
-| 8 | Mobile unit tests, optional CI, Android + iPhone QA checklist, docs, PR | |
+| 3 | Auth (sign up / log in / sign out, encrypted session), role-protected `(passenger)` / `(driver)` groups | ✅ done |
+| 4 | Read-RPC migration (booking history/detail), pgTAP, realtime end-to-end test, regenerated types | ✅ done |
+| 5 | Passenger flow (search, available autos, idempotent booking, live status, cancel, history, issues) | ✅ done |
+| 6 | Driver flow (foreground heartbeat, trip management, walk-ins, start / complete, resume, earnings) | ✅ done |
+| 7 | Earnings period picker, offline / unreachable banners, keep-awake, driver simulator, infra fixes | ✅ done |
+| 8 | Mobile unit tests, QA checklist, docs, PR | ✅ done |
 
 Out of scope: admin work, settlements, background location, push notifications, maps/ETA/ratings/seat numbers, payments/wallet/refunds, phone OTP, EAS/stores.
 
