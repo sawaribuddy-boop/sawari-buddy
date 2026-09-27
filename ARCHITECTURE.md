@@ -127,6 +127,17 @@ Go Offline / trip completed with no new trip ─► stop watch
 - Distance = haversine(passenger device location, driver location), computed on device and re-computed on each location event. "≈ 1.2 km away (straight line)".
 - On reconnect/app foreground: refetch `get_my_active_booking()` (realtime is a hint; the DB is the truth).
 
+### 3.6 Connecting to Supabase in development (Phase 2 Step 2)
+- `src/lib/env.ts` validates `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`. It rejects service-role and secret keys, and warns about `localhost`, which a phone can't reach.
+- `src/lib/supabase.ts` is the single client (anon key only).
+- `pnpm mobile:env` writes `apps/mobile/.env.local` with `http://<Mac LAN IP>:55321`. Colima's forwarder listens on all interfaces, so the phone reaches the Mac directly over Wi-Fi.
+- The dev-only **Connection check** screen tests three paths:
+  - Auth over HTTP (`/auth/v1/health`);
+  - the database via RPC (`get_server_status`, the only function callable before sign-in, which returns just the server time);
+  - Realtime over WebSocket.
+
+  It also measures the phone-vs-server clock skew.
+
 ## 4. Admin web (Next.js on Vercel)
 - App Router, server components; Supabase SSR auth (`@supabase/ssr`) with cookies. Every page checks `is_admin` server-side.
 - Reads via the admin's own JWT (RLS grants admin access). The **service-role key lives only in Vercel server env** and is used only for auth-admin operations (inviting a driver account).

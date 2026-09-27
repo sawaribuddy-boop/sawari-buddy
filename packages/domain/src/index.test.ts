@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { driverAvailability, formatApproxDistance, formatRupees, haversineMeters, secondsUntil, splitFare } from './index';
+import { driverAvailability, formatApproxDistance, formatRupees, formatTimeAgo, haversineMeters, secondsUntil, splitFare } from './index';
 
 describe('haversineMeters', () => {
   it('is zero for the same point', () => {
@@ -64,5 +64,48 @@ describe('secondsUntil', () => {
     const now = new Date('2026-09-26T10:00:00Z');
     expect(secondsUntil('2026-09-26T10:05:00Z', now)).toBe(300);
     expect(secondsUntil('2026-09-26T09:00:00Z', now)).toBe(0);
+  });
+});
+
+describe('formatTimeAgo', () => {
+  const now = new Date('2026-09-26T10:00:00Z');
+
+  it('says "just now" for less than 60 seconds', () => {
+    expect(formatTimeAgo('2026-09-26T09:59:30Z', now)).toBe('just now');
+    expect(formatTimeAgo('2026-09-26T10:00:00Z', now)).toBe('just now');
+  });
+
+  it('shows minutes', () => {
+    expect(formatTimeAgo('2026-09-26T09:57:00Z', now)).toBe('3 min ago');
+    expect(formatTimeAgo('2026-09-26T09:01:00Z', now)).toBe('59 min ago');
+  });
+
+  it('shows hours', () => {
+    expect(formatTimeAgo('2026-09-26T08:00:00Z', now)).toBe('2 hr ago');
+    expect(formatTimeAgo('2026-09-25T11:00:00Z', now)).toBe('23 hr ago');
+  });
+
+  it('shows days', () => {
+    expect(formatTimeAgo('2026-09-25T10:00:00Z', now)).toBe('1 day ago');
+    expect(formatTimeAgo('2026-09-23T10:00:00Z', now)).toBe('3 days ago');
+  });
+
+  it('accepts Date objects', () => {
+    expect(formatTimeAgo(new Date('2026-09-26T09:55:00Z'), now)).toBe('5 min ago');
+  });
+});
+
+describe('greeting / firstName', () => {
+  it('greets by time of day', async () => {
+    const { greeting } = await import('./index');
+    expect(greeting(new Date(2026, 8, 26, 8))).toBe('Good morning');
+    expect(greeting(new Date(2026, 8, 26, 13))).toBe('Good afternoon');
+    expect(greeting(new Date(2026, 8, 26, 20))).toBe('Good evening');
+  });
+
+  it('takes the first name', async () => {
+    const { firstName } = await import('./index');
+    expect(firstName('  Priya Sharma ')).toBe('Priya');
+    expect(firstName('Raj')).toBe('Raj');
   });
 });
