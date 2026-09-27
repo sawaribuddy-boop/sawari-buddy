@@ -18,6 +18,7 @@
     "mobile": "pnpm --filter @sawari/mobile start",
     "admin": "pnpm --filter @sawari/admin dev",
     "mobile:env": "node scripts/dev/mobile-env.mjs",
+    "mobile:env:staging": "cp apps/mobile/.env.staging apps/mobile/.env.local && echo '✔ Switched mobile to STAGING. Restart expo to pick up new values.'",
     "test:integration": "vitest run --project integration",
     "simulate:driver": "tsx scripts/dev/simulate-driver.ts"
   },

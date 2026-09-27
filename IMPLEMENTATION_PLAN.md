@@ -9,7 +9,7 @@ Each phase ends with passing tests, a commit/PR, and your approval before the ne
 | **0** | Discovery & design | ✅ approved with 4 adjustments (PROJECT_SPEC §12) |
 | **1** | Monorepo, Node 22, app skeletons, shared packages, Supabase schema, booking engine, walk-ins, no-shows, presence/heartbeat, ledger foundations, RLS, seed, tests | ✅ approved, merged to `main` |
 | **2** | **Mobile app (Android + iOS): foundation, auth, passenger flow, driver flow**, connected to the real local database (Option A) | ✅ approved, merged to `main` |
-| **3** | Admin web (Next.js) + admin backend: settlements, adjustments, driver onboarding, stuck-trip job | not started |
+| **3** | Admin web (Next.js) + admin backend: staging, settlements, adjustments, driver onboarding, admin audit | ✅ approved, merged to `main` |
 | **4** | Hardening & release: hosted Supabase (SawariBuddy account), EAS builds → TestFlight + Play internal testing, Vercel | not started |
 ---
 
@@ -55,6 +55,12 @@ Each phase ends with passing tests, a commit/PR, and your approval before the ne
 - Vitest unit, 16 files, 119 tests (domain, routing, queryKeys, auth errors, API wrappers, period picker).
 - Integration, 2 files (earnings period, booking).
 
+### Tests (Phase 3 cumulative)
+- pgTAP, 8 files, 215 assertions (+1 file, +7 assertions for admin_cancel_booking).
+- Concurrency (Vitest), 3 tests.
+- Vitest unit, 16 files, 119 tests.
+- Integration, 2 files.
+
 ---
 
 ## Phase 2: mobile app (approved)
@@ -81,10 +87,19 @@ Decisions:
 
 Out of scope: admin work, settlements, background location, push notifications, maps/ETA/ratings/seat numbers, payments/wallet/refunds, phone OTP, EAS/stores.
 
-## Phase 3: admin web (outline)
-- **Foundation:** Next.js + `@supabase/ssr`, a server-side admin guard, CRUD for drivers (onboarding), autos, assignments, stops and routes.
-- **Operations:** trips and bookings views, suspended-trip resolution, the issues queue.
-- **Money and settings:** cash settlements (`record_settlement`), adjustments / reversals, ledger views, the settings editor, dashboard stats, the `flag_stuck_trips` job.
+## Phase 3: admin web + staging
+
+| Step | Scope | Status |
+|---|---|---|
+| 0 | Staging environment: hosted Supabase, push migrations, seed, env files, verify connectivity | ✅ done |
+| 1 | Admin foundation: @supabase/ssr, server-side auth guard, layout, login page | ✅ done |
+| 2 | Reference data CRUD: stops, routes | ✅ done |
+| 3 | Driver onboarding + fleet: invite flow, verify, suspend, autos, assignments | ✅ done |
+| 4 | Operations: trips, bookings, passengers, admin RPCs (admin_cancel_booking) | ✅ done |
+| 5 | Issues queue | ✅ done |
+| 6 | Settlements, adjustments, ledger views + RPCs | ✅ done |
+| 7 | Settings, dashboard, admin_actions audit table | ✅ done |
+| 8 | Tests, staging QA, docs, PR | ✅ done |
 
 ## Phase 4: release (outline)
 - **Hosting:** Supabase staging + production under the **SawariBuddy Supabase account**, with migrations applied via CI.

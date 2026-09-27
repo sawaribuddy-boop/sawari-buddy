@@ -5,7 +5,26 @@ export type Database = {
   
   "public": {
           Tables: {
-            "auto_assignments": {
+            "admin_actions": {
+                  Row: {
+                    "action": string,"admin_id": string,"created_at": string,"id": number,"metadata": NonNullable<Json>,"target_id": string | null,"target_type": string | null
+                  }
+                  Insert: {
+                    "action": string,"admin_id": string,"created_at"?: string,"id"?: never,"metadata"?: NonNullable<Json>,"target_id"?: string | null,"target_type"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"admin_id"?: string,"created_at"?: string,"id"?: never,"metadata"?: NonNullable<Json>,"target_id"?: string | null,"target_type"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "admin_actions_admin_id_fkey"
+      columns: ["admin_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"auto_assignments": {
                   Row: {
                     "assigned_at": string,"auto_id": string,"driver_id": string,"id": string,"revoked_at": string | null
                   }
@@ -470,6 +489,39 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"admin_cancel_booking":
+{ Args: { "p_booking_id": string }; Returns: {
+              "boarded_at": string | null,
+"cancel_reason": Database["public"]['Enums']["booking_cancel_reason"] | null,
+"cancelled_at": string | null,
+"cancelled_by": string | null,
+"code": string,
+"completed_at": string | null,
+"created_at": string,
+"created_by": string,
+"fare_per_seat_paise": number,
+"id": string,
+"idempotency_key": string,
+"no_show_at": string | null,
+"no_show_marked_by": string | null,
+"passenger_id": string | null,
+"payment_method": Database["public"]['Enums']["payment_method"],
+"platform_fee_paise": number,
+"seat_count": number,
+"seat_preference": Database["public"]['Enums']["seat_preference"],
+"source": Database["public"]['Enums']["booking_source"],
+"status": Database["public"]['Enums']["booking_status"],
+"total_fare_paise": number,
+"trip_id": string,
+"updated_at": string,
+"walk_in_label": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "admin_set_user_role":
 { Args: { "p_role": Database["public"]['Enums']["user_role"],"p_user_id": string }; Returns: {
               "created_at": string,
@@ -795,6 +847,12 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"record_adjustment":
+{ Args: { "p_amount_paise": number,"p_description": string,"p_driver_id": string }; Returns: string
+                           },
+"record_settlement":
+{ Args: { "p_amount_paise": number,"p_description"?: string,"p_driver_id": string }; Returns: string
+                           },
 "remove_walk_in":
 { Args: { "p_booking_id": string }; Returns: {
               "boarded_at": string | null,
