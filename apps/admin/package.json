@@ -11,6 +11,10 @@
   "dependencies": {
     "@sawari/constants": "workspace:*",
     "@sawari/domain": "workspace:*",
+    "@sawari/types": "workspace:*",
+    "@sawari/validation": "workspace:*",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
     "next": "~16.3.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
