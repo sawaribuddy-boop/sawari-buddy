@@ -1,11 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AppText, Banner, Button, OfflineBanner, Screen, type TripCardData, TripCard } from '@/components';
 import { useSearchTrips, useStops } from '@/features/trip';
 import { colors, spacing } from '@/theme';
 
 export default function SearchResultsScreen() {
+  const { t } = useTranslation();
   const { originId, destinationId, seatCount: seatCountStr } = useLocalSearchParams<{
     originId: string;
     destinationId: string;
@@ -28,7 +30,7 @@ export default function SearchResultsScreen() {
     <Screen edges={['top']} padded={false}>
       <View style={styles.header}>
         <Button
-          label="Back"
+          label={t('common.back')}
           variant="ghost"
           icon="arrow-left"
           fullWidth={false}
@@ -41,7 +43,7 @@ export default function SearchResultsScreen() {
             {originName} → {destName}
           </AppText>
           <AppText variant="small" color={colors.ink500}>
-            {seatCount} {seatCount === 1 ? 'seat' : 'seats'} · {tripsList.length} {tripsList.length === 1 ? 'auto' : 'autos'} found
+            {t('common.seat', { count: seatCount })} · {tripsList.length} {tripsList.length === 1 ? 'auto' : 'autos'} found
           </AppText>
         </View>
       </View>
@@ -50,18 +52,18 @@ export default function SearchResultsScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.green600} />
           <AppText variant="body" color={colors.ink500}>
-            Searching for shared autos...
+            {t('passenger.searching')}
           </AppText>
         </View>
       ) : isError ? (
         <View style={styles.padded}>
-          <Banner tone="danger" title="Could not search" message="Something went wrong. Please try again." />
-          <Button label="Retry" variant="secondary" onPress={() => void refetch()} />
+          <Banner tone="danger" title={t('passenger.couldNotSearch')} message={t('common.error')} />
+          <Button label={t('common.retry')} variant="secondary" onPress={() => void refetch()} />
         </View>
       ) : tripsList.length === 0 ? (
         <View style={styles.padded}>
-          <Banner tone="info" title="No autos available" message="No shared autos are on this route right now. Try again in a moment." />
-          <Button label="Refresh" variant="secondary" icon="refresh" onPress={() => void refetch()} />
+          <Banner tone="info" title={t('passenger.noAutosTitle')} message={t('passenger.noAutosMessage')} />
+          <Button label={t('common.refresh')} variant="secondary" icon="refresh" onPress={() => void refetch()} />
         </View>
       ) : (
         <FlatList

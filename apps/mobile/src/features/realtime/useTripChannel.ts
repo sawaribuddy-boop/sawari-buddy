@@ -5,6 +5,16 @@ import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { supabase } from '@/lib/supabase';
 
+export interface BookingEvent {
+  passenger_name: string;
+  seat_count: number;
+  action: 'booked' | 'cancelled';
+}
+
+interface TripChannelOptions {
+  onBookingChanged?: (event: BookingEvent) => void;
+}
+
 /**
  * Subscribe to the `trip:<tripId>` broadcast channel. On any event, invalidate the relevant
  * TanStack queries so they refetch authoritative data from the server. The realtime payload
@@ -12,8 +22,10 @@ import { supabase } from '@/lib/supabase';
  *
  * Automatically unsubscribes on unmount or when tripId changes.
  */
-export function useTripChannel(tripId: string | null | undefined) {
+export function useTripChannel(tripId: string | null | undefined, options?: TripChannelOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(options?.onBookingChanged);
+  callbackRef.current = options?.onBookingChanged;
 
   useEffect(() => {
     if (!supabase || !tripId) return;
@@ -24,21 +36,22 @@ export function useTripChannel(tripId: string | null | undefined) {
 
     channel
       .on('broadcast', { event: 'trip_changed' }, () => {
-        // Trip status changed — refetch everything that depends on trip state.
         void queryClient.invalidateQueries({ queryKey: queryKeys.driverHome });
         void queryClient.invalidateQueries({ queryKey: queryKeys.tripManifest(tripId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
       })
-      .on('broadcast', { event: 'booking_changed' }, () => {
-        // Booking added/changed on this trip — refetch manifest and active booking.
+      .on('broadcast', { event: 'booking_changed' }, (msg) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.driverHome });
         void queryClient.invalidateQueries({ queryKey: queryKeys.tripManifest(tripId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
-        // Also invalidate search results since available_seats changed.
         void queryClient.invalidateQueries({ queryKey: ['search-trips'] });
+
+        const payload = msg.payload as BookingEvent | undefined;
+        if (payload && callbackRef.current) {
+          callbackRef.current(payload);
+        }
       })
       .on('broadcast', { event: 'presence_update' }, () => {
-        // Driver location update broadcast to passengers.
         void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
       })
       .subscribe((status) => {

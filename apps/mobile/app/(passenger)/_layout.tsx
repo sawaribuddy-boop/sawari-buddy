@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import type { ColorValue } from 'react-native';
 
 import { Icon, type IconName } from '@/components';
@@ -9,6 +10,7 @@ function tabIcon(name: IconName) {
 }
 
 export default function PassengerLayout() {
+  const { t } = useTranslation();
   return (
     <Tabs
       screenOptions={{
@@ -19,9 +21,9 @@ export default function PassengerLayout() {
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="book" options={{ title: 'Book', tabBarIcon: tabIcon('rickshaw') }} />
-      <Tabs.Screen name="bookings" options={{ title: 'My bookings', tabBarIcon: tabIcon('ticket-confirmation-outline') }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('account-circle-outline') }} />
+      <Tabs.Screen name="book" options={{ title: t('tabs.book'), tabBarIcon: tabIcon('rickshaw') }} />
+      <Tabs.Screen name="bookings" options={{ title: t('tabs.bookings'), tabBarIcon: tabIcon('ticket-confirmation-outline') }} />
+      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: tabIcon('account-circle-outline') }} />
 
       {/* Stack-pushed screens: hidden from tab bar */}
       <Tabs.Screen name="search-results" options={{ href: null }} />

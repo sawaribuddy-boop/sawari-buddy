@@ -1,7 +1,8 @@
 import { formatRupees } from '@sawari/domain';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
-import { colors, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 import { AppText } from './AppText';
 import { Button } from './Button';
@@ -27,6 +28,7 @@ export interface TripCardProps {
 }
 
 export function TripCard({ trip, seatCount, onBook }: TripCardProps) {
+  const { t } = useTranslation();
   const canBook = trip.available_seats >= seatCount;
   return (
     <Card>
@@ -44,19 +46,29 @@ export function TripCard({ trip, seatCount, onBook }: TripCardProps) {
             {formatRupees(trip.fare_paise)}
           </AppText>
           <AppText variant="caption" color={colors.ink500}>
-            per seat
+            {t('tripCard.perSeat')}
           </AppText>
         </View>
       </View>
 
       <SeatBar occupied={trip.capacity - trip.available_seats} capacity={trip.capacity} />
 
+      <View style={styles.availableRow}>
+        <Icon name="seat-passenger" size={16} color={trip.available_seats > 0 ? colors.green700 : colors.warning} />
+        <AppText
+          variant="bodyStrong"
+          color={trip.available_seats > 0 ? colors.green700 : colors.warning}
+        >
+          {t('tripCard.seatsAvailable', { count: trip.available_seats })}
+        </AppText>
+      </View>
+
       <View style={styles.footer}>
         <AppText variant="small" color={colors.ink500}>
-          {seatCount} {seatCount === 1 ? 'seat' : 'seats'} selected
+          {t('tripCard.seatsSelected', { count: seatCount, label: t('tripCard.seatLabel', { count: seatCount }) })}
         </AppText>
         <Button
-          label={canBook ? 'Book Seat' : 'Not enough seats'}
+          label={canBook ? t('tripCard.bookSeat') : t('tripCard.notEnoughSeats')}
           variant="primary"
           size="md"
           fullWidth={false}
@@ -73,5 +85,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   headerText: { flex: 1, gap: spacing.xxs },
   fare: { alignItems: 'flex-end' },
+  availableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    backgroundColor: colors.green50,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
 });

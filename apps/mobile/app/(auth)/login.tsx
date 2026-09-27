@@ -1,6 +1,7 @@
 import { fieldErrors, signInInput } from '@sawari/validation';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, Button, Screen, TextField } from '@/components';
@@ -17,6 +18,7 @@ const DEV_ACCOUNTS = [
 const DEV_PASSWORD = 'SawariDev#2026';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const { signIn, notice, clearNotice } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,29 +48,29 @@ export default function LoginScreen() {
       scroll
       keyboardAvoiding
       edges={['bottom']}
-      footer={<Button label="Log in" loading={submitting} onPress={() => void submit()} disabled={!envResult.ok} />}
+      footer={<Button label={t('login.logInButton')} loading={submitting} onPress={() => void submit()} disabled={!envResult.ok} />}
     >
       <View style={styles.body}>
         <View style={styles.header}>
-          <AppText variant="title">Log in</AppText>
-          <AppText color={colors.ink500}>Passengers and drivers sign in here.</AppText>
+          <AppText variant="title">{t('login.title')}</AppText>
+          <AppText color={colors.ink500}>{t('login.subtitle')}</AppText>
         </View>
 
         {!envResult.ok ? (
           <Banner tone="danger" title="App is not configured" message="Run `pnpm mobile:env` on the Mac and restart `pnpm mobile`." />
         ) : null}
         {blocked ? <Banner tone="danger" title={blocked.title} message={blocked.message} /> : null}
-        {formError ? <Banner tone="danger" title="Couldn't log in" message={formError} /> : null}
+        {formError ? <Banner tone="danger" title={t('login.couldntLogIn')} message={formError} /> : null}
 
         <TextField
-          label="Email"
+          label={t('login.email')}
           value={email}
           onChangeText={(v) => {
             setEmail(v);
             if (notice) clearNotice();
           }}
           error={errors.email}
-          placeholder="you@example.com"
+          placeholder={t('login.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -77,7 +79,7 @@ export default function LoginScreen() {
           returnKeyType="next"
         />
         <TextField
-          label="Password"
+          label={t('login.password')}
           value={password}
           onChangeText={setPassword}
           error={errors.password}
@@ -91,9 +93,9 @@ export default function LoginScreen() {
 
         <Pressable accessibilityRole="link" onPress={() => router.replace('/signup')} hitSlop={8}>
           <AppText variant="small" color={colors.ink500} align="center">
-            New to SawariBuddy?{' '}
+            {t('login.newToSawari')}{' '}
             <AppText variant="small" color={colors.green700} style={styles.link}>
-              Create an account
+              {t('login.createAccount')}
             </AppText>
           </AppText>
         </Pressable>

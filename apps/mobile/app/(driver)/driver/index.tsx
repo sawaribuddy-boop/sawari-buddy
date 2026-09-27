@@ -2,6 +2,7 @@ import { TRIP_STATUS } from '@sawari/constants';
 import { firstName, formatRupees, greeting } from '@sawari/domain';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, Button, Card, Icon, ListRow, OfflineBanner, Screen, SeatBar, StatusPill } from '@/components';
@@ -10,6 +11,7 @@ import {
   useCancelTrip,
   useDriverHome,
   useGoOffline,
+  useGoOnline,
   useHeartbeat,
   useOpenTrip,
 } from '@/features/driver';
@@ -41,22 +43,24 @@ type DriverHomeData = {
 
 const DRIVER_STATUS_NOTICE = {
   PENDING_VERIFICATION: {
-    title: 'Verification pending',
-    message: 'Your driver account is being verified. You can go online once SawariBuddy approves it.',
+    titleKey: 'driver.verifyPendingTitle',
+    messageKey: 'driver.verifyPendingMessage',
   },
   SUSPENDED: {
-    title: 'Driver account suspended',
-    message: 'You cannot go online. Please contact SawariBuddy support.',
+    titleKey: 'driver.suspendedTitle',
+    messageKey: 'driver.suspendedMessage',
   },
 } as const;
 
 export default function DriverHomeScreen() {
+  const { t } = useTranslation();
   const { account } = useAuth();
   const { data: rawHome, isLoading, refetch } = useDriverHome();
   const { data: routes } = useRoutes();
   const { data: stops } = useStops();
   const openTripMutation = useOpenTrip();
   const goOfflineMutation = useGoOffline();
+  const goOnlineMutation = useGoOnline();
   const cancelTripMutation = useCancelTrip();
 
   const home = rawHome as DriverHomeData | null;
@@ -98,6 +102,10 @@ export default function DriverHomeScreen() {
     goOfflineMutation.mutate();
   }, [goOfflineMutation]);
 
+  const handleGoOnline = useCallback(() => {
+    goOnlineMutation.mutate();
+  }, [goOnlineMutation]);
+
   const handleCancelTrip = useCallback(() => {
     if (!home?.active_trip) return;
     cancelTripMutation.mutate({ tripId: home.active_trip.trip.id, reason: 'DRIVER_CANCELLED' });
@@ -105,7 +113,7 @@ export default function DriverHomeScreen() {
 
   if (!account) return null;
 
-  const isMutating = openTripMutation.isPending || goOfflineMutation.isPending || cancelTripMutation.isPending;
+  const isMutating = openTripMutation.isPending || goOfflineMutation.isPending || goOnlineMutation.isPending || cancelTripMutation.isPending;
 
   return (
     <Screen
@@ -118,6 +126,7 @@ export default function DriverHomeScreen() {
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Icon name="account" size={28} color={colors.green700} />
+            {isOnline && <View style={styles.onlineDot} />}
           </View>
           <View style={styles.flex}>
             <AppText variant="small" color={colors.ink500}>
@@ -126,7 +135,7 @@ export default function DriverHomeScreen() {
             <AppText variant="heading">{firstName(account.fullName)}</AppText>
           </View>
           <StatusPill
-            label={isOnline ? 'Online' : 'Offline'}
+            label={isOnline ? t('common.online') : t('common.offline')}
             tone={isOnline ? 'success' : 'neutral'}
           />
         </View>
@@ -134,23 +143,23 @@ export default function DriverHomeScreen() {
         <OfflineBanner />
 
         {restriction ? (
-          <Banner tone="danger" title={restriction.title} message={restriction.message} />
+          <Banner tone="danger" title={t(restriction.titleKey)} message={t(restriction.messageKey)} />
         ) : null}
 
         {/* Heartbeat warning */}
         {heartbeat.isUnreachable ? (
           <Banner
             tone="warning"
-            title="Connection issue"
-            message="Repeated heartbeat failures. Your trip may be suspended if this continues."
+            title={t('driver.connectionIssue')}
+            message={t('driver.connectionMessage')}
           />
         ) : null}
 
         {heartbeat.hasLocationPermission === false && hasActiveTrip ? (
           <Banner
             tone="info"
-            title="Location permission denied"
-            message="Passengers cannot see your location. Grant location access for a better experience."
+            title={t('driver.locationDenied')}
+            message={t('driver.locationMessage')}
           />
         ) : null}
 
@@ -189,7 +198,7 @@ export default function DriverHomeScreen() {
             <View style={styles.tripActions}>
               {tripStatus === TRIP_STATUS.IN_PROGRESS ? (
                 <Button
-                  label="Manage Trip"
+                  label={t('driver.manageTrip')}
                   variant="primary"
                   icon="steering"
                   onPress={() =>
@@ -201,7 +210,7 @@ export default function DriverHomeScreen() {
                 />
               ) : tripStatus === TRIP_STATUS.OPEN || tripStatus === TRIP_STATUS.BOARDING ? (
                 <Button
-                  label="Manage Trip"
+                  label={t('driver.manageTrip')}
                   variant="primary"
                   icon="clipboard-list-outline"
                   onPress={() =>
@@ -212,7 +221,7 @@ export default function DriverHomeScreen() {
                   }
                 />
               ) : tripStatus === TRIP_STATUS.SUSPENDED ? (
-                <Banner tone="danger" title="Trip suspended" message="You were unreachable. Resume connectivity to continue." />
+                <Banner tone="danger" title={t('driver.tripSuspendedTitle')} message={t('driver.tripSuspendedMessage')} />
               ) : null}
             </View>
           </Card>
@@ -224,16 +233,16 @@ export default function DriverHomeScreen() {
             {!auto ? (
               <Banner
                 tone="warning"
-                title="No auto assigned"
-                message="Contact SawariBuddy to assign an auto to your account."
+                title={t('driver.noAutoTitle')}
+                message={t('driver.noAutoMessage')}
               />
             ) : (
               <Card>
                 <AppText variant="heading" style={styles.sectionTitle}>
-                  Open a Trip
+                  {t('driver.openTrip')}
                 </AppText>
                 <AppText variant="small" color={colors.ink500} style={styles.sectionHint}>
-                  Select a route to start accepting passengers on {auto.registration_number}
+                  {t('driver.selectRoute', { registration: auto.registration_number })}
                 </AppText>
 
                 {routeList.map((r) => {
@@ -253,7 +262,7 @@ export default function DriverHomeScreen() {
                 })}
 
                 <Button
-                  label="Open Trip"
+                  label={t('driver.openTripButton')}
                   variant="primary"
                   icon="play-circle-outline"
                   loading={openTripMutation.isPending}
@@ -261,17 +270,26 @@ export default function DriverHomeScreen() {
                   onPress={handleOpenTrip}
                 />
                 {openTripMutation.isError ? (
-                  <Banner tone="danger" title="Could not open trip" message={openTripMutation.error.message} />
+                  <Banner tone="danger" title={t('driver.couldNotOpen')} message={openTripMutation.error.message} />
                 ) : null}
               </Card>
             )}
           </>
         ) : null}
 
-        {/* Go offline */}
+        {/* Go online / Go offline */}
+        {!isOnline && !hasActiveTrip && !restriction ? (
+          <Button
+            label={t('driver.goOnline')}
+            variant="primary"
+            icon="power"
+            loading={goOnlineMutation.isPending}
+            onPress={handleGoOnline}
+          />
+        ) : null}
         {isOnline && !hasActiveTrip ? (
           <Button
-            label="Go Offline"
+            label={t('driver.goOffline')}
             variant="ghost"
             icon="power"
             loading={goOfflineMutation.isPending}
@@ -284,7 +302,7 @@ export default function DriverHomeScreen() {
         (tripStatus === TRIP_STATUS.OPEN || tripStatus === TRIP_STATUS.BOARDING) &&
         home.active_trip!.occupied_seats === 0 ? (
           <Button
-            label="Cancel Trip"
+            label={t('driver.cancelTrip')}
             variant="ghost"
             icon="close-circle-outline"
             loading={cancelTripMutation.isPending}
@@ -298,35 +316,18 @@ export default function DriverHomeScreen() {
             <View style={styles.earningsRow}>
               <View style={styles.flex}>
                 <AppText variant="small" color={colors.ink500}>
-                  Today's earnings
+                  {t('driver.todaysEarnings')}
                 </AppText>
                 <AppText variant="heading" color={colors.green700}>
                   {formatRupees((home.earnings as Record<string, unknown>).earnings_paise as number)}
                 </AppText>
               </View>
               <AppText variant="small" color={colors.ink500}>
-                {(home.earnings as Record<string, unknown>).completed_trips as number} trips
+                {t('driver.trips', { count: (home.earnings as Record<string, unknown>).completed_trips as number })}
               </AppText>
             </View>
-            <Button
-              label="View Earnings"
-              variant="ghost"
-              size="md"
-              fullWidth={false}
-              onPress={() => router.push('/driver/earnings')}
-            />
           </Card>
         ) : null}
-
-        {/* Profile */}
-        <Card padded={false} style={styles.listCard}>
-          <ListRow
-            icon="account-circle-outline"
-            title="Profile"
-            subtitle="Account and sign out"
-            onPress={() => router.push('/driver/profile')}
-          />
-        </Card>
       </View>
     </Screen>
   );
@@ -343,11 +344,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#22c55e',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
   flex: { flex: 1 },
   tripHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   tripActions: { marginTop: spacing.md, gap: spacing.sm },
   sectionTitle: { marginBottom: spacing.xs },
   sectionHint: { marginBottom: spacing.md },
-  earningsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  listCard: { paddingHorizontal: spacing.md },
+  earningsRow: { flexDirection: 'row', alignItems: 'center' },
 });

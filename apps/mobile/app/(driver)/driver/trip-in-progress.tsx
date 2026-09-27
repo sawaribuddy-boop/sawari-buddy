@@ -2,6 +2,7 @@ import { BOOKING_STATUS, errorMessageFor, isErrorCode } from '@sawari/constants'
 import { formatRupees } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useKeepAwake } from 'expo-keep-awake';
@@ -24,6 +25,7 @@ type Booking = {
 
 export default function TripInProgressScreen() {
   useKeepAwake();
+  const { t } = useTranslation();
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
@@ -55,8 +57,8 @@ export default function TripInProgressScreen() {
     return (
       <Screen edges={['top']}>
         <View style={styles.body}>
-          <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
-          <AppText variant="title">Loading...</AppText>
+          <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+          <AppText variant="title">{t('tripInProgress.loading')}</AppText>
         </View>
       </Screen>
     );
@@ -72,7 +74,7 @@ export default function TripInProgressScreen() {
       refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetch()} />}
       footer={
         <Button
-          label="Complete Trip"
+          label={t('tripInProgress.completeTrip')}
           variant="primary"
           icon="check-circle"
           loading={completeTripMutation.isPending}
@@ -81,14 +83,14 @@ export default function TripInProgressScreen() {
       }
     >
       <View style={styles.body}>
-        <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+        <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
 
         <OfflineBanner />
 
         <View style={styles.heroCard}>
           <Icon name="steering" color={colors.white} size={32} />
           <AppText variant="title" color={colors.white}>
-            Trip In Progress
+            {t('tripInProgress.title')}
           </AppText>
           <AppText variant="body" color={colors.green100}>
             {route?.origin} → {route?.destination}
@@ -98,7 +100,7 @@ export default function TripInProgressScreen() {
         {completeTripMutation.isError ? (
           <Banner
             tone="danger"
-            title="Error"
+            title={t('tripInProgress.error')}
             message={
               isErrorCode(completeTripMutation.error.message)
                 ? errorMessageFor(completeTripMutation.error)
@@ -111,17 +113,17 @@ export default function TripInProgressScreen() {
 
         <Card>
           <View style={styles.fareRow}>
-            <AppText variant="bodyStrong">Total fare to collect</AppText>
+            <AppText variant="bodyStrong">{t('tripInProgress.totalFare')}</AppText>
             <AppText variant="heading" color={colors.green700}>
               {formatRupees(totalFare)}
             </AppText>
           </View>
           <AppText variant="small" color={colors.ink500}>
-            Cash · {boardedBookings.length} {boardedBookings.length === 1 ? 'booking' : 'bookings'}
+            {t('tripInProgress.cashBookings', { count: boardedBookings.length })}
           </AppText>
         </Card>
 
-        <AppText variant="heading">Passengers on board</AppText>
+        <AppText variant="heading">{t('tripInProgress.passengersOnBoard')}</AppText>
         {boardedBookings.map((b) => (
           <Card key={b.id}>
             <View style={styles.bookingRow}>
@@ -130,13 +132,13 @@ export default function TripInProgressScreen() {
               </View>
               <View style={styles.flex}>
                 <AppText variant="body">
-                  {b.source === 'WALK_IN' ? b.walk_in_label || 'Walk-in' : b.passenger_first_name || 'Passenger'}
+                  {b.source === 'WALK_IN' ? b.walk_in_label || t('trip.walkIn') : b.passenger_first_name || t('trip.passenger')}
                 </AppText>
                 <AppText variant="small" color={colors.ink500}>
-                  {b.seat_count} {b.seat_count === 1 ? 'seat' : 'seats'} · {formatRupees(b.total_fare_paise)}
+                  {t('common.seat', { count: b.seat_count })} · {formatRupees(b.total_fare_paise)}
                 </AppText>
               </View>
-              <StatusPill label="On board" tone="success" />
+              <StatusPill label={t('tripInProgress.onBoard')} tone="success" />
             </View>
           </Card>
         ))}

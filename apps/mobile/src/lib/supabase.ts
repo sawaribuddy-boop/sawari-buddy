@@ -1,7 +1,7 @@
 import 'react-native-url-polyfill/auto';
 
 import type { Database } from '@sawari/types';
-import { createClient, processLock, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { envResult } from './env';
 import { secureSessionStorage } from './secureStorage';
@@ -25,7 +25,6 @@ export const supabase: AppSupabaseClient | null = envResult.ok
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
-        lock: processLock,
       },
     })
   : null;

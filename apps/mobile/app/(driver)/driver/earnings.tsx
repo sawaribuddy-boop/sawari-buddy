@@ -1,6 +1,7 @@
 import { formatRupees } from '@sawari/domain';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, type EarningsPeriod, PERIOD_LABELS, PeriodPicker, Screen } from '@/components';
@@ -8,6 +9,7 @@ import { useDriverEarnings } from '@/features/driver';
 import { colors, spacing } from '@/theme';
 
 export default function EarningsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const [period, setPeriod] = useState<EarningsPeriod>('today');
@@ -27,8 +29,8 @@ export default function EarningsScreen() {
       refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetch()} />}
     >
       <View style={styles.body}>
-        <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
-        <AppText variant="title">Earnings</AppText>
+        <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+        <AppText variant="title">{t('earnings.title')}</AppText>
         <PeriodPicker
           onChange={(r, key) => {
             setRange(r);
@@ -42,7 +44,7 @@ export default function EarningsScreen() {
         <Card>
           <View style={styles.mainAmount}>
             <AppText variant="small" color={colors.ink500}>
-              Net Earnings
+              {t('earnings.netEarnings')}
             </AppText>
             <AppText variant="display" color={colors.green700}>
               {formatRupees(netEarnings)}
@@ -53,19 +55,19 @@ export default function EarningsScreen() {
         <Card>
           <View style={styles.detailRow}>
             <AppText variant="body" color={colors.ink500}>
-              Trips completed
+              {t('earnings.tripsCompleted')}
             </AppText>
             <AppText variant="bodyStrong">{tripCount}</AppText>
           </View>
           <View style={styles.detailRow}>
             <AppText variant="body" color={colors.ink500}>
-              Total fares collected
+              {t('earnings.totalFares')}
             </AppText>
             <AppText variant="bodyStrong">{formatRupees(totalFare)}</AppText>
           </View>
           <View style={styles.detailRow}>
             <AppText variant="body" color={colors.ink500}>
-              Platform fee
+              {t('earnings.platformFee')}
             </AppText>
             <AppText variant="bodyStrong" color={colors.danger}>
               -{formatRupees(platformFee)}

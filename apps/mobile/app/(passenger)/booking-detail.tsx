@@ -2,6 +2,7 @@ import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode } from
 import { firstName as getFirstName, formatTimeAgo } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AppText, Banner, BookingCard, type BookingCardData, Button, OfflineBanner, Screen } from '@/components';
 import { useCancelBooking, useMyActiveBooking, useMyBooking } from '@/features/booking';
@@ -9,6 +10,7 @@ import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 export default function BookingDetailScreen() {
+  const { t } = useTranslation();
   const { bookingId, tripId, justBooked } = useLocalSearchParams<{
     bookingId: string;
     tripId?: string;
@@ -40,10 +42,10 @@ export default function BookingDetailScreen() {
   useTripChannel(channelTripId ?? null);
 
   const handleCancel = () => {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
-      { text: 'No, keep it', style: 'cancel' },
+    Alert.alert(t('bookingDetail.cancelTitle'), t('bookingDetail.cancelMessage'), [
+      { text: t('bookingDetail.cancelNo'), style: 'cancel' },
       {
-        text: 'Yes, cancel',
+        text: t('bookingDetail.cancelYes'),
         style: 'destructive',
         onPress: () => {
           if (bookingId) cancelMutation.mutate(bookingId);
@@ -58,9 +60,9 @@ export default function BookingDetailScreen() {
     return (
       <Screen edges={['top']}>
         <View style={styles.body}>
-          <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+          <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
           <AppText variant="body" color={colors.ink500}>
-            Loading booking...
+            {t('bookingDetail.loading')}
           </AppText>
         </View>
       </Screen>
@@ -87,18 +89,18 @@ export default function BookingDetailScreen() {
   return (
     <Screen scroll edges={['top']}>
       <View style={styles.body}>
-        <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+        <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
 
         <OfflineBanner />
 
         {justBooked === '1' ? (
-          <Banner tone="success" title="Booking Confirmed!" message="Your seats have been reserved." />
+          <Banner tone="success" title={t('bookingDetail.confirmedTitle')} message={t('bookingDetail.confirmedMessage')} />
         ) : null}
 
         {isActive && driver?.reachable === false ? (
           <Banner
             tone="warning"
-            title="Driver may be unreachable"
+            title={t('bookingDetail.driverUnreachable')}
             message={
               driver.last_seen_at
                 ? `Last seen ${formatTimeAgo(driver.last_seen_at as string)}`
@@ -110,20 +112,20 @@ export default function BookingDetailScreen() {
         {cancelMutation.isError ? (
           <Banner
             tone="danger"
-            title={isErrorCode(cancelMutation.error?.message) ? errorMessageFor(cancelMutation.error) : 'Could not cancel booking'}
-            message={cancelMutation.error?.message === 'INVALID_TRANSITION' ? 'You may have already boarded.' : undefined}
+            title={isErrorCode(cancelMutation.error?.message) ? errorMessageFor(cancelMutation.error) : t('bookingDetail.couldNotCancel')}
+            message={cancelMutation.error?.message === 'INVALID_TRANSITION' ? t('bookingDetail.cancelAlreadyBoarded') : undefined}
           />
         ) : null}
 
         {cancelMutation.isSuccess ? (
-          <Banner tone="info" title="Booking cancelled" />
+          <Banner tone="info" title={t('bookingDetail.bookingCancelled')} />
         ) : null}
 
         <BookingCard booking={cardData} />
 
         {status === BOOKING_STATUS.CONFIRMED && !cancelMutation.isSuccess ? (
           <Button
-            label="Cancel Booking"
+            label={t('bookingDetail.cancelButton')}
             variant="dangerSoft"
             icon="close-circle-outline"
             loading={cancelMutation.isPending}
@@ -132,7 +134,7 @@ export default function BookingDetailScreen() {
         ) : null}
 
         {status === BOOKING_STATUS.BOARDED ? (
-          <Banner tone="info" title="You are on board" message="Enjoy your ride!" />
+          <Banner tone="info" title={t('bookingDetail.onBoardTitle')} message={t('bookingDetail.onBoardMessage')} />
         ) : null}
       </View>
     </Screen>

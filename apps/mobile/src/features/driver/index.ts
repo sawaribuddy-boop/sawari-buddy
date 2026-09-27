@@ -6,6 +6,7 @@ export { useDriverHeartbeat } from './useDriverHeartbeat';
 export { useDriverHome } from './useDriverHome';
 export { useFinalCall } from './useFinalCall';
 export { useGoOffline } from './useGoOffline';
+export { useGoOnline } from './useGoOnline';
 export { useHeartbeat } from './useHeartbeat';
 export type { HeartbeatState } from './useHeartbeat';
 export { useMarkBoarded } from './useMarkBoarded';

@@ -1,1 +1,1 @@
-export { useTripChannel } from './useTripChannel';
+export { useTripChannel, type BookingEvent } from './useTripChannel';

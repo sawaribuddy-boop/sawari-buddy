@@ -2,6 +2,7 @@ import { firstName, formatRupees } from '@sawari/domain';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, Stepper, StopPicker } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -10,6 +11,7 @@ import { usePlatformSettings, useRoutes, useStops } from '@/features/trip';
 import { colors, spacing } from '@/theme';
 
 export default function BookScreen() {
+  const { t } = useTranslation();
   const { account } = useAuth();
   const router = useRouter();
 
@@ -52,15 +54,15 @@ export default function BookScreen() {
         <OfflineBanner />
 
         <AppText variant="small" color={colors.ink500}>
-          Hi {account ? firstName(account.fullName) : 'there'}
+          {account ? t('passenger.greeting', { name: firstName(account.fullName) }) : t('passenger.greetingFallback')}
         </AppText>
-        <AppText variant="title">Where are you going?</AppText>
+        <AppText variant="title">{t('passenger.whereGoing')}</AppText>
 
         {hasActiveBooking ? (
           <>
-            <Banner tone="info" title="You have an active booking" message="Tap below to view it." />
+            <Banner tone="info" title={t('passenger.activeBookingTitle')} message={t('passenger.activeBookingMessage')} />
             <Button
-              label="View my booking"
+              label={t('passenger.viewMyBooking')}
               variant="secondary"
               icon="ticket-confirmation-outline"
               onPress={() => {
@@ -77,13 +79,13 @@ export default function BookScreen() {
         <View style={styles.pickersRow}>
           <View style={styles.pickers}>
             <StopPicker
-              label="From"
+              label={t('passenger.from')}
               stops={stopsLoading ? [] : stopsList}
               selectedId={originId}
               onSelect={setOriginId}
             />
             <StopPicker
-              label="To"
+              label={t('passenger.to')}
               stops={stopsLoading ? [] : stopsList}
               selectedId={destinationId}
               onSelect={setDestinationId}
@@ -101,13 +103,13 @@ export default function BookScreen() {
 
         <Card>
           <View style={styles.seatRow}>
-            <AppText variant="bodyStrong">Passengers</AppText>
-            <Stepper value={seatCount} min={1} max={maxSeats} onChange={setSeatCount} label="Passengers" />
+            <AppText variant="bodyStrong">{t('passenger.passengers')}</AppText>
+            <Stepper value={seatCount} min={1} max={maxSeats} onChange={setSeatCount} label={t('passenger.passengers')} />
           </View>
         </Card>
 
         <Button
-          label="Find Shared Auto"
+          label={t('passenger.findAuto')}
           variant="primary"
           icon="magnify"
           onPress={handleSearch}
@@ -116,7 +118,7 @@ export default function BookScreen() {
 
         {routesList.length > 0 ? (
           <View style={styles.popularSection}>
-            <AppText variant="heading">Popular Routes</AppText>
+            <AppText variant="heading">{t('passenger.popularRoutes')}</AppText>
             {routesList.map((r) => {
               const origin = stopsMap.get(r.origin_stop_id);
               const dest = stopsMap.get(r.destination_stop_id);
@@ -135,7 +137,7 @@ export default function BookScreen() {
                       {origin} → {dest}
                     </AppText>
                     <AppText variant="small" color={colors.ink500}>
-                      {formatRupees(r.fare_paise)}/seat
+                      {t('passenger.farePerSeat', { amount: formatRupees(r.fare_paise) })}
                     </AppText>
                   </View>
                   <Icon name="chevron-right" color={colors.ink400} />

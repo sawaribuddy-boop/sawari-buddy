@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
@@ -17,6 +18,7 @@ export interface WalkInSheetProps {
 }
 
 export function WalkInSheet({ visible, onClose, onAdd, isLoading = false, maxSeats = 4 }: WalkInSheetProps) {
+  const { t } = useTranslation();
   const [seatCount, setSeatCount] = useState(1);
   const [label, setLabel] = useState('');
 
@@ -29,19 +31,19 @@ export function WalkInSheet({ visible, onClose, onAdd, isLoading = false, maxSea
   }, [visible]);
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Add Walk-in">
+    <Sheet visible={visible} onClose={onClose} title={t('trip.addWalkIn')}>
       <View style={styles.content}>
-        <Stepper value={seatCount} min={1} max={maxSeats} onChange={setSeatCount} label="Seats" />
+        <Stepper value={seatCount} min={1} max={maxSeats} onChange={setSeatCount} label={t('trip.walkInSeats')} />
         <TextField
-          label="Label"
-          placeholder="Label (optional)"
+          label={t('trip.walkInLabel')}
+          placeholder={t('trip.walkInPlaceholder')}
           value={label}
           onChangeText={setLabel}
           autoCapitalize="words"
           returnKeyType="done"
         />
         <Button
-          label="Add Walk-in"
+          label={t('trip.addWalkInConfirm')}
           variant="primary"
           icon="account-plus"
           onPress={() => onAdd(seatCount, label.trim())}

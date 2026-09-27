@@ -1,7 +1,9 @@
 import { BOOKING_STATUS, TRIP_STATUS, errorMessageFor, isErrorCode } from '@sawari/constants';
 import { formatRupees, secondsUntil } from '@sawari/domain';
+import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useKeepAwake } from 'expo-keep-awake';
@@ -14,11 +16,13 @@ import {
   Icon,
   OfflineBanner,
   Screen,
-  SeatBar,
+  SeatDiagram,
   Sheet,
   StatusPill,
   Stepper,
   TextField,
+  Toast,
+  type ToastMessage,
 } from '@/components';
 import {
   useAddWalkIn,
@@ -32,7 +36,7 @@ import {
   useStartTrip,
   useTripManifest,
 } from '@/features/driver';
-import { useTripChannel } from '@/features/realtime';
+import { useTripChannel, type BookingEvent } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 type Booking = {
@@ -50,12 +54,23 @@ type Booking = {
 
 export default function TripScreen() {
   useKeepAwake();
+  const { t } = useTranslation();
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
   const { data: rawManifest } = useTripManifest(tripId ?? '');
 
-  useTripChannel(tripId);
+  const onBookingChanged = useCallback((event: BookingEvent) => {
+    if (event.action === 'booked') {
+      setToast({
+        id: Date.now().toString(),
+        text: t('trip.newBooking', { name: event.passenger_name, count: event.seat_count }),
+        icon: 'account-check',
+      });
+    }
+  }, [t]);
+
+  useTripChannel(tripId, { onBookingChanged });
 
   const finalCallMutation = useFinalCall();
   const startTripMutation = useStartTrip();
@@ -70,6 +85,7 @@ export default function TripScreen() {
   const [walkInSeats, setWalkInSeats] = useState(1);
   const [walkInLabel, setWalkInLabel] = useState('');
   const [noShowTick, setNoShowTick] = useState(0);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const home = rawHome as Record<string, unknown> | null;
   const activeTrip = home?.active_trip as Record<string, unknown> | null;
@@ -95,7 +111,7 @@ export default function TripScreen() {
   const hasBoarded = bookings.some((b) => b.status === BOOKING_STATUS.BOARDED);
   const canStart = !hasConfirmed && hasBoarded;
 
-  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const idempotencyKeyRef = useRef(randomUUID());
 
   const handleAddWalkIn = useCallback(() => {
     if (!tripId) return;
@@ -111,7 +127,7 @@ export default function TripScreen() {
           setWalkInSheetVisible(false);
           setWalkInSeats(1);
           setWalkInLabel('');
-          idempotencyKeyRef.current = crypto.randomUUID();
+          idempotencyKeyRef.current = randomUUID();
         },
       },
     );
@@ -158,8 +174,10 @@ export default function TripScreen() {
     return (
       <Screen edges={['top']}>
         <View style={styles.body}>
-          <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
-          <AppText variant="title">Loading trip...</AppText>
+          <View style={styles.backBtn}>
+            <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+          </View>
+          <AppText variant="title">{t('trip.loading')}</AppText>
         </View>
       </Screen>
     );
@@ -191,8 +209,11 @@ export default function TripScreen() {
       edges={['top']}
       refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetch()} />}
     >
+      <Toast message={toast} onDismiss={() => setToast(null)} />
       <View style={styles.body}>
-        <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+        <View style={styles.backBtn}>
+          <Button label={t('common.back')} variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
+        </View>
 
         <OfflineBanner />
 
@@ -219,9 +240,9 @@ export default function TripScreen() {
 
         {status === TRIP_STATUS.SUSPENDED ? (
           <>
-            <Banner tone="danger" title="Trip suspended" message="You were unreachable. Resume to continue." />
+            <Banner tone="danger" title={t('trip.suspended')} message={t('trip.suspendedMessage')} />
             <Button
-              label="Resume Trip"
+              label={t('trip.resumeTrip')}
               variant="primary"
               icon="play-circle-outline"
               loading={resumeTripMutation.isPending}
@@ -233,18 +254,18 @@ export default function TripScreen() {
         {mutationError ? (
           <Banner
             tone="danger"
-            title="Error"
+            title={t('trip.error')}
             message={isErrorCode(mutationError.message) ? errorMessageFor(mutationError) : mutationError.message}
           />
         ) : null}
 
-        <SeatBar occupied={occupiedSeats} capacity={capacity} />
+        <SeatDiagram capacity={capacity} occupiedSeats={occupiedSeats} readOnly />
 
         {/* Manifest */}
-        <AppText variant="heading">Passengers</AppText>
+        <AppText variant="heading">{t('trip.passengers')}</AppText>
         {bookings.length === 0 ? (
           <AppText variant="body" color={colors.ink500}>
-            No passengers yet
+            {t('trip.noPassengers')}
           </AppText>
         ) : null}
 
@@ -256,10 +277,10 @@ export default function TripScreen() {
               </View>
               <View style={styles.flex}>
                 <AppText variant="body">
-                  {b.source === 'WALK_IN' ? b.walk_in_label || 'Walk-in' : b.passenger_first_name || 'Passenger'}
+                  {b.source === 'WALK_IN' ? b.walk_in_label || t('trip.walkIn') : b.passenger_first_name || t('trip.passenger')}
                 </AppText>
                 <AppText variant="small" color={colors.ink500}>
-                  {b.seat_count} {b.seat_count === 1 ? 'seat' : 'seats'}
+                  {t('common.seat', { count: b.seat_count })}
                   {b.seat_preference && b.seat_preference !== 'ANY' ? ` · ${b.seat_preference}` : ''}
                 </AppText>
               </View>
@@ -278,7 +299,7 @@ export default function TripScreen() {
             <View style={styles.bookingActions}>
               {b.status === BOOKING_STATUS.CONFIRMED ? (
                 <Button
-                  label="Mark Boarded"
+                  label={t('trip.markBoarded')}
                   variant="primary"
                   size="md"
                   fullWidth={false}
@@ -289,7 +310,7 @@ export default function TripScreen() {
               ) : null}
               {b.status === BOOKING_STATUS.BOARDED && b.source === 'APP' && noShowAllowed ? (
                 <Button
-                  label="No-show"
+                  label={t('trip.noShow')}
                   variant="ghost"
                   size="md"
                   fullWidth={false}
@@ -302,7 +323,7 @@ export default function TripScreen() {
               b.source === 'WALK_IN' &&
               (status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) ? (
                 <Button
-                  label="Remove"
+                  label={t('trip.remove')}
                   variant="ghost"
                   size="md"
                   fullWidth={false}
@@ -318,26 +339,15 @@ export default function TripScreen() {
         {/* No-show countdown */}
         {status === TRIP_STATUS.BOARDING && noShowEligibleAt && noShowSecondsLeft > 0 ? (
           <AppText variant="small" color={colors.warning}>
-            No-show available in {noShowSecondsLeft}s
+            {t('trip.noShowIn', { seconds: noShowSecondsLeft })}
           </AppText>
         ) : null}
 
         {/* Actions */}
         <View style={styles.actions}>
-          {status === TRIP_STATUS.OPEN ? (
-            <Button
-              label="Final Call"
-              variant="secondary"
-              icon="bullhorn-outline"
-              loading={finalCallMutation.isPending}
-              disabled={isMutating}
-              onPress={handleFinalCall}
-            />
-          ) : null}
-
           {(status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) ? (
             <Button
-              label="Add Walk-in"
+              label={t('trip.addWalkIn')}
               variant="secondary"
               icon="account-plus-outline"
               disabled={isMutating || occupiedSeats >= capacity}
@@ -345,14 +355,14 @@ export default function TripScreen() {
                 setWalkInSheetVisible(true);
                 setWalkInSeats(1);
                 setWalkInLabel('');
-                idempotencyKeyRef.current = crypto.randomUUID();
+                idempotencyKeyRef.current = randomUUID();
               }}
             />
           ) : null}
 
           {(status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) && canStart ? (
             <Button
-              label="Start Trip"
+              label={t('trip.startTrip')}
               variant="primary"
               icon="play"
               loading={startTripMutation.isPending}
@@ -363,7 +373,7 @@ export default function TripScreen() {
 
           {(status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) ? (
             <Button
-              label="Cancel Trip"
+              label={t('trip.cancelTrip')}
               variant="ghost"
               icon="close-circle-outline"
               loading={cancelTripMutation.isPending}
@@ -375,29 +385,29 @@ export default function TripScreen() {
       </View>
 
       {/* Walk-in sheet */}
-      <Sheet visible={walkInSheetVisible} onClose={() => setWalkInSheetVisible(false)} title="Add Walk-in Passenger">
+      <Sheet visible={walkInSheetVisible} onClose={() => setWalkInSheetVisible(false)} title={t('trip.addWalkInTitle')}>
         <View style={styles.sheetBody}>
           <View style={styles.sheetRow}>
-            <AppText variant="bodyStrong">Seats</AppText>
+            <AppText variant="bodyStrong">{t('trip.walkInSeats')}</AppText>
             <Stepper
               value={walkInSeats}
               min={1}
               max={Math.max(capacity - occupiedSeats, 1)}
               onChange={setWalkInSeats}
-              label="Seats"
+              label={t('trip.walkInSeats')}
             />
           </View>
           <TextField
-            label="Label (optional)"
-            placeholder="e.g. Uncle ji"
+            label={t('trip.walkInLabel')}
+            placeholder={t('trip.walkInPlaceholder')}
             value={walkInLabel}
             onChangeText={setWalkInLabel}
           />
           {addWalkInMutation.isError ? (
-            <Banner tone="danger" title="Error" message={addWalkInMutation.error.message} />
+            <Banner tone="danger" title={t('trip.error')} message={addWalkInMutation.error.message} />
           ) : null}
           <Button
-            label="Add Walk-in"
+            label={t('trip.addWalkInConfirm')}
             variant="primary"
             icon="account-plus"
             loading={addWalkInMutation.isPending}
@@ -411,6 +421,7 @@ export default function TripScreen() {
 
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
+  backBtn: { alignItems: 'flex-start' },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   flex: { flex: 1 },
   bookingHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

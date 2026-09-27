@@ -1,6 +1,7 @@
 import { fieldErrors, MIN_PASSWORD_LENGTH, signUpInput } from '@sawari/validation';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, Button, Screen, TextField } from '@/components';
@@ -11,6 +12,7 @@ import { colors, spacing } from '@/theme';
 // Passenger sign-up. The account role is always PASSENGER (set by the database trigger);
 // driver accounts are created by SawariBuddy.
 export default function SignupScreen() {
+  const { t } = useTranslation();
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,37 +43,37 @@ export default function SignupScreen() {
       scroll
       keyboardAvoiding
       edges={['bottom']}
-      footer={<Button label="Create account" loading={submitting} onPress={() => void submit()} disabled={!envResult.ok || checkEmail} />}
+      footer={<Button label={t('signup.createButton')} loading={submitting} onPress={() => void submit()} disabled={!envResult.ok || checkEmail} />}
     >
       <View style={styles.body}>
         <View style={styles.header}>
-          <AppText variant="title">Create your account</AppText>
-          <AppText color={colors.ink500}>Book a seat in a shared auto, quickly and easily.</AppText>
+          <AppText variant="title">{t('signup.title')}</AppText>
+          <AppText color={colors.ink500}>{t('signup.subtitle')}</AppText>
         </View>
 
         {!envResult.ok ? (
           <Banner tone="danger" title="App is not configured" message="Run `pnpm mobile:env` on the Mac and restart `pnpm mobile`." />
         ) : null}
-        {formError ? <Banner tone="danger" title="Couldn't create your account" message={formError} /> : null}
-        {checkEmail ? <Banner tone="success" title="Check your email" message="Confirm your email address, then log in." /> : null}
+        {formError ? <Banner tone="danger" title={t('signup.couldntCreate')} message={formError} /> : null}
+        {checkEmail ? <Banner tone="success" title={t('signup.checkEmail')} message={t('signup.checkEmailMessage')} /> : null}
 
         <TextField
-          label="Full name"
+          label={t('signup.fullName')}
           value={fullName}
           onChangeText={setFullName}
           error={errors.fullName}
-          placeholder="Priya Sharma"
+          placeholder={t('signup.fullNamePlaceholder')}
           autoCapitalize="words"
           autoComplete="name"
           textContentType="name"
           returnKeyType="next"
         />
         <TextField
-          label="Email"
+          label={t('signup.email')}
           value={email}
           onChangeText={setEmail}
           error={errors.email}
-          placeholder="you@example.com"
+          placeholder={t('signup.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -80,11 +82,11 @@ export default function SignupScreen() {
           returnKeyType="next"
         />
         <TextField
-          label="Password"
+          label={t('signup.password')}
           value={password}
           onChangeText={setPassword}
           error={errors.password}
-          hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
+          hint={t('signup.passwordHint', { min: MIN_PASSWORD_LENGTH })}
           secureTextEntry
           autoCapitalize="none"
           autoComplete="new-password"
@@ -94,14 +96,14 @@ export default function SignupScreen() {
         />
 
         <AppText variant="caption" color={colors.ink500}>
-          This creates a passenger account. Driver accounts are set up by SawariBuddy.
+          {t('signup.passengerNote')}
         </AppText>
 
         <Pressable accessibilityRole="link" onPress={() => router.replace('/login')} hitSlop={8}>
           <AppText variant="small" color={colors.ink500} align="center">
-            Already have an account?{' '}
+            {t('signup.alreadyHaveAccount')}{' '}
             <AppText variant="small" color={colors.green700} style={styles.link}>
-              Log in
+              {t('signup.logIn')}
             </AppText>
           </AppText>
         </Pressable>

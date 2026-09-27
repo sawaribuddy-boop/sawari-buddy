@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, Icon, StatusPill } from '@/components';
@@ -10,15 +11,16 @@ const ROLE_LABEL = { PASSENGER: 'Passenger', DRIVER: 'Driver' } as const;
 
 /** Shared profile card + sign out (passenger and driver profile screens). */
 export function ProfileView() {
+  const { t } = useTranslation();
   const { account, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   if (!account) return null;
 
   function confirmSignOut() {
-    Alert.alert('Sign out?', 'You will need to log in again to use SawariBuddy.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('common.signOutTitle'), t('common.signOutMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign out',
+        text: t('common.signOut'),
         style: 'destructive',
         onPress: () => {
           setSigningOut(true);
@@ -46,7 +48,7 @@ export function ProfileView() {
           <StatusPill label={ROLE_LABEL[account.role]} tone={account.role === 'DRIVER' ? 'info' : 'success'} />
         </View>
       </Card>
-      <Button label="Sign out" variant="dangerSoft" icon="logout" loading={signingOut} onPress={confirmSignOut} />
+      <Button label={t('common.signOut')} variant="dangerSoft" icon="logout" loading={signingOut} onPress={confirmSignOut} />
     </View>
   );
 }

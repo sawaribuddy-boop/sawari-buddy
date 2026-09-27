@@ -138,6 +138,10 @@ export async function goOffline(client: AppSupabaseClient) {
   return unwrap(await client.rpc('go_offline'));
 }
 
+export async function goOnline(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('go_online'));
+}
+
 export async function driverHeartbeat(
   client: AppSupabaseClient,
   args: { lat?: number; lng?: number; accuracyM?: number } = {},

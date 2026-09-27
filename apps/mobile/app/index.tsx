@@ -1,5 +1,6 @@
 import { Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, BrandMark, Button, Screen } from '@/components';
@@ -10,6 +11,7 @@ import { colors, spacing } from '@/theme';
 // Entry route: shows the loading / error state while the session and account resolve, then
 // sends the user to Welcome (or Log in with a notice), the passenger home, or the driver home.
 export default function Index() {
+  const { t } = useTranslation();
   const { status, account, notice, errorMessage, retry, signOut } = useAuth();
   const href = homeHref({ status, role: account?.role ?? null, hasNotice: notice !== null });
 
@@ -17,15 +19,15 @@ export default function Index() {
 
   if (status === 'error') {
     return (
-      <Screen footer={<Button label="Sign out" variant="ghost" onPress={() => void signOut()} />}>
+      <Screen footer={<Button label={t('common.signOut')} variant="ghost" onPress={() => void signOut()} />}>
         <View style={styles.center}>
           <BrandMark />
           <Banner
             tone="warning"
-            title="Can't reach SawariBuddy"
-            message={errorMessage ?? 'Check your connection. You are still signed in.'}
+            title={t('common.cantReachTitle')}
+            message={errorMessage ?? t('common.cantReachMessage')}
           />
-          <Button label="Try again" onPress={() => void retry()} />
+          <Button label={t('common.tryAgain')} onPress={() => void retry()} />
         </View>
       </Screen>
     );
@@ -37,7 +39,7 @@ export default function Index() {
       <BrandMark size={52} onDark />
       <ActivityIndicator color={colors.autoYellow} size="large" />
       <AppText variant="small" color="rgba(255,255,255,0.75)">
-        Loading…
+        {t('common.loading')}
       </AppText>
     </View>
   );

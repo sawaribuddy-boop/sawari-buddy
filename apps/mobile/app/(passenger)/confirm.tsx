@@ -1,15 +1,17 @@
-import { SEAT_PREFERENCE, type SeatPreference, errorMessageFor, isErrorCode } from '@sawari/constants';
+import { errorMessageFor, isErrorCode } from '@sawari/constants';
 import { formatRupees } from '@sawari/domain';
+import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { AppText, Banner, BookingCard, Button, Card, Icon, Screen, SeatPreferenceRadio } from '@/components';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { AppText, Banner, Button, Card, Icon, Screen, SeatDiagram } from '@/components';
 import { useBookSeats } from '@/features/booking';
 import { colors, spacing } from '@/theme';
 
 export default function ConfirmScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     tripId: string;
     seatCount: string;
@@ -20,25 +22,32 @@ export default function ConfirmScreen() {
     destinationId: string;
     originName: string;
     destName: string;
+    capacity: string;
+    availableSeats: string;
   }>();
   const router = useRouter();
-  const { account } = useAuth();
   const bookMutation = useBookSeats();
 
-  const seatCount = Number(params.seatCount) || 1;
-  const farePaise = Number(params.farePaise) || 0;
-  const totalFare = farePaise * seatCount;
+  const capacity = Number(params.capacity) || 5;
+  const availableSeats = Number(params.availableSeats) || capacity;
+  const occupiedSeats = capacity - availableSeats;
+  const passengerCount = Number(params.seatCount) || 1;
+  const maxSeats = Math.min(passengerCount, availableSeats);
 
-  const [preference, setPreference] = useState<SeatPreference>(SEAT_PREFERENCE.ANY);
-  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const [seatMode, setSeatMode] = useState<'any' | 'specific'>('any');
+  const [selectedSeats, setSelectedSeats] = useState(passengerCount);
+  const farePaise = Number(params.farePaise) || 0;
+  const totalFare = farePaise * selectedSeats;
+
+  const idempotencyKeyRef = useRef(randomUUID());
 
   const handleConfirm = () => {
     bookMutation.mutate(
       {
         tripId: params.tripId ?? '',
-        seatCount,
+        seatCount: seatMode === 'any' ? passengerCount : selectedSeats,
         idempotencyKey: idempotencyKeyRef.current,
-        seatPreference: preference,
+        seatPreference: 'ANY',
       },
       {
         onSuccess: (booking) => {
@@ -64,7 +73,7 @@ export default function ConfirmScreen() {
   return (
     <Screen scroll edges={['top']} footer={
       <Button
-        label="Confirm Booking"
+        label={t('confirm.confirmButton')}
         variant="primary"
         icon="check-circle"
         loading={bookMutation.isPending}
@@ -73,21 +82,32 @@ export default function ConfirmScreen() {
       />
     }>
       <View style={styles.body}>
-        <Button
-          label="Back"
-          variant="ghost"
-          icon="arrow-left"
-          fullWidth={false}
-          size="md"
-          onPress={() => router.back()}
-        />
-        <AppText variant="title">Confirm Your Booking</AppText>
+        <View style={styles.backBtn}>
+          <Button
+            label={t('common.back')}
+            variant="ghost"
+            icon="arrow-left"
+            fullWidth={false}
+            size="md"
+            onPress={() =>
+              router.replace({
+                pathname: '/(passenger)/search-results',
+                params: {
+                  originId: params.originId ?? '',
+                  destinationId: params.destinationId ?? '',
+                  seatCount: String(passengerCount),
+                },
+              })
+            }
+          />
+        </View>
+        <AppText variant="title">{t('confirm.title')}</AppText>
 
         {bookMutation.isError ? (
           <>
             <Banner
               tone={isActiveBookingError ? 'info' : isSeatError ? 'warning' : 'danger'}
-              title={isErrorCode(errorCode) ? errorMessageFor(bookMutation.error) : 'Booking failed'}
+              title={isErrorCode(errorCode) ? errorMessageFor(bookMutation.error) : t('confirm.bookingFailed')}
               message={
                 isSeatError
                   ? undefined
@@ -95,19 +115,19 @@ export default function ConfirmScreen() {
                     ? undefined
                     : isActiveBookingError
                       ? undefined
-                      : 'You can try again safely.'
+                      : t('confirm.tryAgainSafely')
               }
             />
             {isActiveBookingError ? (
               <Button
-                label="View my booking"
+                label={t('confirm.viewMyBooking')}
                 variant="secondary"
                 onPress={() => router.replace('/(passenger)/bookings')}
               />
             ) : null}
             {(isSeatError || isTripError) ? (
               <Button
-                label="Back to available autos"
+                label={t('confirm.backToAutos')}
                 variant="secondary"
                 icon="arrow-left"
                 onPress={() => router.back()}
@@ -124,32 +144,71 @@ export default function ConfirmScreen() {
             <AppText variant="bodyStrong">{params.destName}</AppText>
           </View>
 
-          <View style={styles.details}>
-            <DetailLine label="Auto" value={params.autoRegistration ?? ''} />
-            <DetailLine label="Driver" value={params.driverFirstName ?? ''} />
-            <DetailLine label="Seats" value={String(seatCount)} />
-            <DetailLine label="Fare" value={`${formatRupees(farePaise)}/seat × ${seatCount} = ${formatRupees(totalFare)}`} />
-            <DetailLine label="Payment" value="Cash" />
+          <View style={styles.tripInfoRow}>
+            <View style={styles.details}>
+              <DetailLine label={t('confirm.auto')} value={params.autoRegistration ?? ''} />
+              <DetailLine label={t('confirm.driver')} value={params.driverFirstName ?? ''} />
+              <DetailLine label={t('confirm.seats')} value={String(seatMode === 'any' ? passengerCount : selectedSeats)} />
+              <DetailLine label={t('confirm.fare')} value={`${formatRupees(farePaise)}/${t('common.perSeat')} × ${seatMode === 'any' ? passengerCount : selectedSeats} = ${formatRupees(farePaise * (seatMode === 'any' ? passengerCount : selectedSeats))}`} />
+              <DetailLine label={t('confirm.payment')} value={t('common.cash')} />
+            </View>
+
+            <View style={styles.driverPhoto}>
+              <Icon name="account" size={36} color={colors.green700} />
+            </View>
           </View>
         </Card>
 
         <Card>
           <AppText variant="bodyStrong" style={styles.prefTitle}>
-            Passenger
+            {t('confirm.selectSeats')}
           </AppText>
-          <AppText variant="body" color={colors.ink700}>
-            {account?.fullName ?? 'Unknown'}
-          </AppText>
-        </Card>
 
-        <Card>
-          <AppText variant="bodyStrong" style={styles.prefTitle}>
-            Seat Preference
-          </AppText>
-          <AppText variant="small" color={colors.ink500} style={styles.prefHint}>
-            Preference only — not guaranteed
-          </AppText>
-          <SeatPreferenceRadio value={preference} onChange={setPreference} />
+          <Pressable
+            style={styles.radioRow}
+            onPress={() => setSeatMode('any')}
+          >
+            <Icon
+              name={seatMode === 'any' ? 'radiobox-marked' : 'radiobox-blank'}
+              size={22}
+              color={seatMode === 'any' ? colors.green700 : colors.ink400}
+            />
+            <View style={styles.radioText}>
+              <AppText variant="body">{t('confirm.anySeat')}</AppText>
+              <AppText variant="small" color={colors.ink500}>{t('confirm.anySeatHint')}</AppText>
+            </View>
+          </Pressable>
+
+          <Pressable
+            style={styles.radioRow}
+            onPress={() => setSeatMode('specific')}
+          >
+            <Icon
+              name={seatMode === 'specific' ? 'radiobox-marked' : 'radiobox-blank'}
+              size={22}
+              color={seatMode === 'specific' ? colors.green700 : colors.ink400}
+            />
+            <View style={styles.radioText}>
+              <AppText variant="body">{t('confirm.specificSeat')}</AppText>
+              <AppText variant="small" color={colors.ink500}>{t('confirm.specificSeatHint')}</AppText>
+            </View>
+          </Pressable>
+
+          {seatMode === 'specific' ? (
+            <>
+              <View style={styles.diagramDivider} />
+              <AppText variant="small" color={colors.ink500} style={styles.prefHint}>
+                {t('confirm.seatsHint', { selected: selectedSeats, available: availableSeats })}
+              </AppText>
+              <SeatDiagram
+                capacity={capacity}
+                occupiedSeats={occupiedSeats}
+                selectedSeats={selectedSeats}
+                onSelectSeats={setSelectedSeats}
+                maxSelectable={maxSeats}
+              />
+            </>
+          ) : null}
         </Card>
       </View>
     </Screen>
@@ -169,10 +228,34 @@ function DetailLine({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
+  backBtn: { alignItems: 'flex-start' },
   routeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  details: { gap: spacing.sm },
+  tripInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  details: { flex: 1, gap: spacing.sm },
   detailLine: { flexDirection: 'row', alignItems: 'center' },
   detailLabel: { width: 70 },
-  prefTitle: { marginBottom: spacing.xs },
-  prefHint: { marginBottom: spacing.md },
+  driverPhoto: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: colors.green50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.green100,
+  },
+  prefTitle: { marginBottom: spacing.md },
+  prefHint: { marginBottom: spacing.sm },
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  radioText: { flex: 1, gap: 2 },
+  diagramDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
 });

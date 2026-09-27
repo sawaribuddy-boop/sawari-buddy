@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
@@ -14,16 +15,17 @@ export interface SeatBarProps {
  * deliberately unnumbered: V1 has no seat assignment.
  */
 export function SeatBar({ occupied, capacity }: SeatBarProps) {
+  const { t } = useTranslation();
   const filled = Math.min(Math.max(occupied, 0), capacity);
   return (
-    <View accessible accessibilityRole="progressbar" accessibilityLabel={`${filled} of ${capacity} seats filled`}
+    <View accessible accessibilityRole="progressbar" accessibilityLabel={t('seatBar.filled', { filled, capacity })}
       accessibilityValue={{ min: 0, max: capacity, now: filled }}>
       <View style={styles.header}>
         <AppText variant="small" color={colors.ink500}>
-          Seats
+          {t('seatBar.seats')}
         </AppText>
         <AppText variant="small" color={colors.ink900} style={styles.count}>
-          {filled} / {capacity} filled
+          {t('seatBar.filled', { filled, capacity })}
         </AppText>
       </View>
       <View style={styles.track}>

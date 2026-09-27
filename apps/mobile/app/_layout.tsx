@@ -1,13 +1,27 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { routeGuards } from '@/features/auth/routing';
+import { initI18n } from '@/i18n';
 import { queryClient } from '@/lib/queryClient';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
+  const [i18nReady, setI18nReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void initI18n().then(() => {
+      if (!cancelled) setI18nReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!i18nReady) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

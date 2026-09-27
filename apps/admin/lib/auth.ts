@@ -11,6 +11,7 @@ export async function requireAdmin() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, email, full_name, role')
+    .eq('id', user.id)
     .single();
 
   if (profile?.role !== USER_ROLE.ADMIN) {

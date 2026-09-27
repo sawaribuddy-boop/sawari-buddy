@@ -16,5 +16,6 @@ export function useSearchTrips(originStopId: string | null, destinationStopId: s
       return fetchSearchTrips(supabase, originStopId, destinationStopId);
     },
     enabled: !!supabase && !!originStopId && !!destinationStopId,
+    refetchInterval: 10_000,
   });
 }

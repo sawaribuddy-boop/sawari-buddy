@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import { colors, radius, spacing } from '@/theme';
 // Concept screen P1 (Splash / Welcome). The photo in the concept is replaced by a styled
 // PLACEHOLDER scene (D5) until final brand artwork is provided.
 export default function WelcomeScreen() {
+  const { t } = useTranslation();
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
@@ -23,10 +25,10 @@ export default function WelcomeScreen() {
 
         <View style={styles.bottom}>
           <AppText variant="display" color={colors.white}>
-            Shared Auto
+            {t('welcome.sharedAuto')}
           </AppText>
           <View style={styles.taglines}>
-            {['Same route', 'Lower cost', 'A better commute'].map((line) => (
+            {[t('welcome.sameRoute'), t('welcome.lowerCost'), t('welcome.betterCommute')].map((line) => (
               <AppText key={line} variant="heading" color="rgba(255,255,255,0.88)" style={styles.tagline}>
                 {line}
               </AppText>
@@ -34,19 +36,19 @@ export default function WelcomeScreen() {
           </View>
 
           <View style={styles.values}>
-            <Value icon="shield-check-outline" label="Safe" />
-            <Value icon="account-group-outline" label="Affordable" />
-            <Value icon="leaf" label="Eco-friendly" />
+            <Value icon="shield-check-outline" label={t('welcome.safe')} />
+            <Value icon="account-group-outline" label={t('welcome.affordable')} />
+            <Value icon="leaf" label={t('welcome.ecoFriendly')} />
           </View>
 
-          <Button label="Get Started" onPress={() => router.push('/signup')} />
+          <Button label={t('welcome.getStarted')} onPress={() => router.push('/signup')} />
 
           <Link href="/login" asChild>
             <Pressable accessibilityRole="link" style={styles.loginLink} hitSlop={8}>
               <AppText variant="small" color="rgba(255,255,255,0.8)" align="center">
-                Already have an account?{' '}
+                {t('welcome.alreadyHaveAccount')}{' '}
                 <AppText variant="small" color={colors.white} style={styles.loginStrong}>
-                  Log in
+                  {t('welcome.logIn')}
                 </AppText>
               </AppText>
             </Pressable>

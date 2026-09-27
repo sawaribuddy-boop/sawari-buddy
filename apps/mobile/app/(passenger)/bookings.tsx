@@ -1,5 +1,6 @@
 import type { BookingStatus } from '@sawari/constants';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, type BookingHistoryRowData, BookingHistoryRow, OfflineBanner, Screen } from '@/components';
@@ -7,6 +8,7 @@ import { useMyBookingHistory } from '@/features/booking';
 import { colors, spacing } from '@/theme';
 
 export default function BookingsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isRefetching } =
     useMyBookingHistory();
@@ -26,7 +28,7 @@ export default function BookingsScreen() {
   return (
     <Screen edges={['top']} padded={false}>
       <View style={styles.header}>
-        <AppText variant="title">My bookings</AppText>
+        <AppText variant="title">{t('bookings.title')}</AppText>
         <OfflineBanner />
       </View>
 
@@ -36,15 +38,15 @@ export default function BookingsScreen() {
         </View>
       ) : isError ? (
         <View style={styles.padded}>
-          <Banner tone="danger" title="Could not load bookings" message="Pull down to retry." />
+          <Banner tone="danger" title={t('bookings.couldNotLoad')} message={t('bookings.pullToRetry')} />
         </View>
       ) : allBookings.length === 0 ? (
         <View style={styles.center}>
           <AppText variant="body" color={colors.ink500}>
-            No bookings yet
+            {t('bookings.noBookingsYet')}
           </AppText>
           <AppText variant="small" color={colors.ink400}>
-            Your booking history will appear here
+            {t('bookings.noBookingsHint')}
           </AppText>
         </View>
       ) : (

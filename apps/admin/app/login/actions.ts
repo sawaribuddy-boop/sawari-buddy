@@ -15,9 +15,13 @@ export async function login(_prev: string | null, formData: FormData): Promise<s
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return 'Invalid email or password.';
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 'Invalid email or password.';
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
+    .eq('id', user.id)
     .single();
 
   if (profile?.role !== USER_ROLE.ADMIN) {
