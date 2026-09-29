@@ -1,11 +1,19 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { AppState } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { routeGuards } from '@/features/auth/routing';
 import { queryClient } from '@/lib/queryClient';
 import { colors } from '@/theme';
+
+// React Native has no window focus, so tell TanStack Query when the app comes to the foreground.
+// This makes `refetchOnWindowFocus` refetch anything the realtime socket missed while backgrounded.
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener('change', (state) => handleFocus(state === 'active'));
+  return () => subscription.remove();
+});
 
 export default function RootLayout() {
   return (

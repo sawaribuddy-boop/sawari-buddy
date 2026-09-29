@@ -5,7 +5,6 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, BookingCard, type BookingCardData, Button, OfflineBanner, Screen } from '@/components';
 import { useCancelBooking, useMyActiveBooking, useMyBooking } from '@/features/booking';
-import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 export default function BookingDetailScreen() {
@@ -35,9 +34,6 @@ export default function BookingDetailScreen() {
 
   const status = booking?.status as BookingStatus | undefined;
   const isActive = status === BOOKING_STATUS.CONFIRMED || status === BOOKING_STATUS.BOARDED;
-  const channelTripId = isActive ? (tripId ?? (booking?.trip_id as string | undefined)) : undefined;
-
-  useTripChannel(channelTripId ?? null);
 
   const handleCancel = () => {
     Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [

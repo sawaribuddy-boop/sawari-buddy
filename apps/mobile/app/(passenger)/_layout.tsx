@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 
 import { Icon, type IconName } from '@/components';
+import { usePassengerTripChannel } from '@/features/realtime';
 import { colors } from '@/theme';
 
 function tabIcon(name: IconName) {
@@ -9,6 +10,8 @@ function tabIcon(name: IconName) {
 }
 
 export default function PassengerLayout() {
+  usePassengerTripChannel();
+
   return (
     <Tabs
       screenOptions={{
