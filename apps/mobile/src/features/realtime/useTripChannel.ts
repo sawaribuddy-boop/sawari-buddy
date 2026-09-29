@@ -10,6 +10,10 @@ import { supabase } from '@/lib/supabase';
  * TanStack queries so they refetch authoritative data from the server. The realtime payload
  * is treated as a *signal*, never as the source of truth.
  *
+ * The channel is private: the database sends with `realtime.send(..., private => true)` and
+ * RLS on realtime.messages decides who may join, so the client must join with `private: true`
+ * or it never receives anything.
+ *
  * Automatically unsubscribes on unmount or when tripId changes.
  */
 export function useTripChannel(tripId: string | null | undefined) {
@@ -19,7 +23,7 @@ export function useTripChannel(tripId: string | null | undefined) {
     if (!supabase || !tripId) return;
 
     const channel = supabase.channel(`trip:${tripId}`, {
-      config: { broadcast: { self: true } },
+      config: { private: true },
     });
 
     channel
@@ -37,12 +41,17 @@ export function useTripChannel(tripId: string | null | undefined) {
         // Also invalidate search results since available_seats changed.
         void queryClient.invalidateQueries({ queryKey: ['search-trips'] });
       })
-      .on('broadcast', { event: 'presence_update' }, () => {
+      .on('broadcast', { event: 'location' }, () => {
         // Driver location update broadcast to passengers.
         void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
       })
       .subscribe((status) => {
-        if (__DEV__ && status !== 'SUBSCRIBED') {
+        if (status === 'SUBSCRIBED') {
+          // Covers events missed before the first join or while the socket was reconnecting.
+          void queryClient.invalidateQueries({ queryKey: queryKeys.driverHome });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.tripManifest(tripId) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
+        } else if (__DEV__) {
           console.log(`[trip:${tripId}] channel status: ${status}`);
         }
       });
