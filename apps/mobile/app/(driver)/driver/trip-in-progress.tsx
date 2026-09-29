@@ -8,7 +8,6 @@ import { useKeepAwake } from 'expo-keep-awake';
 
 import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, SeatBar, StatusPill } from '@/components';
 import { useCompleteTrip, useDriverHome } from '@/features/driver';
-import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 type Booking = {
@@ -28,8 +27,6 @@ export default function TripInProgressScreen() {
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
   const completeTripMutation = useCompleteTrip();
-
-  useTripChannel(tripId);
 
   const home = rawHome as Record<string, unknown> | null;
   const activeTrip = home?.active_trip as Record<string, unknown> | null;

@@ -32,7 +32,6 @@ import {
   useStartTrip,
   useTripManifest,
 } from '@/features/driver';
-import { useTripChannel } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 type Booking = {
@@ -54,8 +53,6 @@ export default function TripScreen() {
   const router = useRouter();
   const { data: rawHome, refetch } = useDriverHome();
   const { data: rawManifest } = useTripManifest(tripId ?? '');
-
-  useTripChannel(tripId);
 
   const finalCallMutation = useFinalCall();
   const startTripMutation = useStartTrip();

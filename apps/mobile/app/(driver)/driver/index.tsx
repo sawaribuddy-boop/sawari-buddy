@@ -13,7 +13,6 @@ import {
   useHeartbeat,
   useOpenTrip,
 } from '@/features/driver';
-import { useTripChannel } from '@/features/realtime';
 import { useRoutes, useStops } from '@/features/trip';
 import { colors, radius, spacing } from '@/theme';
 
@@ -63,9 +62,6 @@ export default function DriverHomeScreen() {
   const home = rawHome as DriverHomeData | null;
   const hasActiveTrip = !!home?.active_trip;
   const tripStatus = home?.active_trip?.trip.status;
-
-  // Live seat count and bookings on the home card, without pull-to-refresh.
-  useTripChannel(home?.active_trip?.trip.id);
 
   const heartbeat = useHeartbeat(hasActiveTrip && tripStatus !== 'COMPLETED' && tripStatus !== 'CANCELLED');
 

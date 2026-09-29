@@ -19,5 +19,6 @@ export { StatusPill, type PillTone } from './StatusPill';
 export { Stepper } from './Stepper';
 export { StopPicker, type Stop, type StopPickerProps } from './StopPicker';
 export { TextField } from './TextField';
+export { Toast, type ToastMessage } from './Toast';
 export { TripCard, type TripCardData, type TripCardProps } from './TripCard';
 export { WalkInSheet, type WalkInSheetProps } from './WalkInSheet';

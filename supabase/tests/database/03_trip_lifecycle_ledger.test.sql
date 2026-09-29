@@ -96,6 +96,12 @@ select set_config('request.jwt.claims', json_build_object('sub', :'raj', 'role',
 select is((select cancel_reason::text from public.cancel_trip(:'trip2')), 'DRIVER_CANCELLED', 'driver cancels an open trip');
 select is((select status::text || '/' || cancel_reason::text from public.bookings where id = :'b_neha'),
           'CANCELLED/TRIP_CANCELLED', 'bookings are cancelled with the trip');
+reset role;
+select is((select payload ->> 'cancel_reason' from realtime.messages
+            where topic = 'trip:' || :'trip2' and event = 'booking_changed'
+              and payload ->> 'booking_id' = :'b_neha' and payload ->> 'status' = 'CANCELLED'),
+          'TRIP_CANCELLED', 'booking_changed broadcast carries the cancel reason');
+set local role authenticated;
 select is((select count(*)::int from public.ledger_transactions where trip_id = :'trip2'), 0,
           'cancelled trip posts nothing to the ledger (cash, nothing collected)');
 
