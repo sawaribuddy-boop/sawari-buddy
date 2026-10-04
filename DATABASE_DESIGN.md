@@ -11,6 +11,7 @@
 | `20260926000500_business_functions.sql` | all state-changing RPCs, unreachable-driver sweep |
 | `20260926000600_read_functions.sql` | read RPCs (search, active booking, manifest, public settings, earnings) |
 | `20260926000700_rls_grants_realtime_cron.sql` | table/function privileges, RLS policies, Realtime channel authorisation + broadcast triggers, pg_cron schedule |
+| `20261004000100_ride_ratings.sql` | `ride_ratings`; `rate_booking`, `get_my_pending_rating`; rating fields on `get_my_booking` / `get_my_booking_history` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -100,6 +101,7 @@ platform_settings (single row) 1─* settings_events
   - No location history.
 - **`trip_events`**, **`booking_events`**: append-only audit rows (from/to status, actor, actor role, metadata), written by triggers.
 - **`issues`**: passenger, driver and system issues. A partial unique index allows only one open system issue per (trip, kind).
+- **`ride_ratings`**: the passenger's rating of a completed app booking. Primary key `booking_id` (one rating per booking, final once given); `stars` 1–5, optional `comment` ≤ 500 chars, `driver_id` snapshotted from the trip.
 
 ### Finance: append-only double-entry ledger
 - **`ledger_accounts`**: `(type, owner_profile_id)` unique with `nulls not distinct`. Per-person accounts have an owner; platform accounts are singletons.
@@ -162,6 +164,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `go_offline` | driver | stop being online; auto-cancels an empty trip |
 | `driver_heartbeat(lat?, lng?, accuracy?)` | driver | liveness + latest location, throttled, broadcast to `trip:<id>` |
 | `raise_issue` | passenger / driver | complaint about own booking/trip |
+| `rate_booking(booking, stars, comment?)` | passenger | rate own `COMPLETED` booking once (`ALREADY_RATED`, `RATING_INVALID`) |
+| `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
 | `admin_set_user_role` | admin | promote to driver/admin |
 | `search_trips(origin, destination)` | signed-in | bookable trips with server-computed `available_seats` and driver location |
 | `get_my_active_booking()` | passenger | booking + trip + auto + driver reachability/location |
@@ -187,6 +191,7 @@ RLS is enabled on every table. `anon` has no table or function access. Clients (
 | driver_presence | — (via search / active booking RPCs) | own | all |
 | trip_events / booking_events | own trips / bookings | own trips | all |
 | issues | raised by self | raised by self | all + update |
+| ride_ratings | own (writes via RPC only) | — | all (read) |
 | ledger_* | own accounts (none in V1) | own settlement account | all (read) |
 
 Other people's personal data is never exposed through tables. Drivers see passengers' **first names** only, via `get_trip_manifest`. Passengers see drivers' first names, auto details and location only through `search_trips` / `get_my_active_booking`.

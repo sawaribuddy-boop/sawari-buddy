@@ -6,6 +6,7 @@ import { colors, MIN_TOUCH, radius, spacing } from '@/theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 import type { PillTone } from './StatusPill';
+import { StarRating } from './StarRating';
 import { StatusPill } from './StatusPill';
 
 export interface BookingHistoryRowData {
@@ -15,6 +16,8 @@ export interface BookingHistoryRowData {
   origin: string;
   destination: string;
   createdAt: string;
+  /** Stars the passenger gave; null when the ride has not been rated. */
+  ratingStars?: number | null;
 }
 
 export interface BookingHistoryRowProps {
@@ -63,9 +66,20 @@ export function BookingHistoryRow({ booking, onPress }: BookingHistoryRowProps) 
           <Icon name="arrow-right" color={colors.ink400} size={14} />
           <AppText variant="bodyStrong">{booking.destination}</AppText>
         </View>
-        <AppText variant="caption" color={colors.ink400}>
-          {formatDate(booking.createdAt)}
-        </AppText>
+        <View style={styles.bottomLine}>
+          <AppText variant="caption" color={colors.ink400}>
+            {formatDate(booking.createdAt)}
+          </AppText>
+          {booking.status === BOOKING_STATUS.COMPLETED ? (
+            booking.ratingStars ? (
+              <StarRating value={booking.ratingStars} size={14} />
+            ) : (
+              <AppText variant="caption" color={colors.green700}>
+                Rate this ride
+              </AppText>
+            )
+          ) : null}
+        </View>
       </View>
       <Icon name="chevron-right" color={colors.ink400} />
     </Pressable>
@@ -88,4 +102,5 @@ const styles = StyleSheet.create({
   left: { flex: 1, gap: spacing.xs },
   topLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   route: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  bottomLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });

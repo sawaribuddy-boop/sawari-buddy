@@ -20,6 +20,7 @@ export default function BookingsScreen() {
       origin: b.origin as string,
       destination: b.destination as string,
       createdAt: b.created_at as string,
+      ratingStars: (b.rating_stars as number | null | undefined) ?? null,
     }));
   });
 

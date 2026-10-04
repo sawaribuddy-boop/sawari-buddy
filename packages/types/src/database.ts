@@ -336,6 +336,43 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"ride_ratings": {
+                  Row: {
+                    "booking_id": string,"comment": string | null,"created_at": string,"driver_id": string,"passenger_id": string,"stars": number,"trip_id": string
+                  }
+                  Insert: {
+                    "booking_id": string,"comment"?: string | null,"created_at"?: string,"driver_id": string,"passenger_id": string,"stars": number,"trip_id": string
+                  }
+                  Update: {
+                    "booking_id"?: string,"comment"?: string | null,"created_at"?: string,"driver_id"?: string,"passenger_id"?: string,"stars"?: number,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ride_ratings_booking_id_fkey"
+      columns: ["booking_id"]
+isOneToOne: true
+      referencedRelation: "bookings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ride_ratings_driver_id_fkey"
+      columns: ["driver_id"]
+isOneToOne: false
+      referencedRelation: "drivers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ride_ratings_passenger_id_fkey"
+      columns: ["passenger_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ride_ratings_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: false
+      referencedRelation: "trips"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"routes": {
                   Row: {
                     "approx_distance_m": number | null,"created_at": string,"destination_stop_id": string,"display_order": number,"fare_paise": number,"id": string,"is_active": boolean,"origin_stop_id": string,"updated_at": string
@@ -704,6 +741,9 @@ isOneToOne: false
 "get_my_booking_history":
 { Args: { "p_before"?: string,"p_limit"?: number }; Returns: Json
                            },
+"get_my_pending_rating":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_platform_settings_public":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -844,6 +884,22 @@ isOneToOne: false
                           SetofOptions: {
         from: "*"
         to: "issues"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"rate_booking":
+{ Args: { "p_booking_id": string,"p_comment"?: string,"p_stars": number }; Returns: {
+              "booking_id": string,
+"comment": string | null,
+"created_at": string,
+"driver_id": string,
+"passenger_id": string,
+"stars": number,
+"trip_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "ride_ratings"
         isOneToOne: true
         isSetofReturn: false
       } },

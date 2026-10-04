@@ -1,10 +1,22 @@
 import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode } from '@sawari/constants';
 import { firstName as getFirstName, formatTimeAgo } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, BookingCard, type BookingCardData, Button, OfflineBanner, Screen } from '@/components';
-import { useCancelBooking, useMyActiveBooking, useMyBooking } from '@/features/booking';
+import {
+  AppText,
+  Banner,
+  BookingCard,
+  type BookingCardData,
+  Button,
+  Card,
+  OfflineBanner,
+  RateRideSheet,
+  Screen,
+  StarRating,
+} from '@/components';
+import { useCancelBooking, useMyActiveBooking, useMyBooking, useRateBooking } from '@/features/booking';
 import { colors, spacing } from '@/theme';
 
 export default function BookingDetailScreen() {
@@ -18,6 +30,8 @@ export default function BookingDetailScreen() {
   const activeQuery = useMyActiveBooking();
   const detailQuery = useMyBooking(bookingId ?? null);
   const cancelMutation = useCancelBooking();
+  const rateMutation = useRateBooking();
+  const [rateSheetOpen, setRateSheetOpen] = useState(false);
 
   const activeData = activeQuery.data as Record<string, unknown> | null;
   const detailData = detailQuery.data as Record<string, unknown> | null;
@@ -31,6 +45,7 @@ export default function BookingDetailScreen() {
   const route = source?.route as Record<string, unknown> | undefined;
   const auto = source?.auto as Record<string, unknown> | undefined;
   const driver = source?.driver as Record<string, unknown> | undefined;
+  const rating = detailData?.rating as { stars: number; comment: string | null } | null | undefined;
 
   const status = booking?.status as BookingStatus | undefined;
   const isActive = status === BOOKING_STATUS.CONFIRMED || status === BOOKING_STATUS.BOARDED;
@@ -66,8 +81,8 @@ export default function BookingDetailScreen() {
   const cardData: BookingCardData = {
     code: (booking.code as string) ?? '',
     status: status ?? BOOKING_STATUS.CONFIRMED,
-    origin: (route?.origin_name as string) ?? '',
-    destination: (route?.destination_name as string) ?? '',
+    origin: (route?.origin as string) ?? '',
+    destination: (route?.destination as string) ?? '',
     autoRegistration: (auto?.registration_number as string) ?? '',
     driverFirstName: driver?.first_name
       ? (driver.first_name as string)
@@ -130,11 +145,53 @@ export default function BookingDetailScreen() {
         {status === BOOKING_STATUS.BOARDED ? (
           <Banner tone="info" title="You are on board" message="Enjoy your ride!" />
         ) : null}
+
+        {status === BOOKING_STATUS.COMPLETED && rating ? (
+          <Card>
+            <View style={styles.rating}>
+              <AppText variant="small" color={colors.ink500}>
+                Your rating
+              </AppText>
+              <StarRating value={rating.stars} size={24} />
+              {rating.comment ? <AppText variant="body">{rating.comment}</AppText> : null}
+            </View>
+          </Card>
+        ) : null}
+
+        {status === BOOKING_STATUS.COMPLETED && detailData && !rating ? (
+          <Button label="Rate this ride" variant="secondary" icon="star-outline" onPress={() => setRateSheetOpen(true)} />
+        ) : null}
       </View>
+
+      <RateRideSheet
+        visible={rateSheetOpen}
+        onClose={() => {
+          setRateSheetOpen(false);
+          rateMutation.reset();
+        }}
+        onSubmit={(stars, comment) => {
+          if (!bookingId) return;
+          rateMutation.mutate(
+            { bookingId, stars, comment },
+            {
+              onSuccess: () => setRateSheetOpen(false),
+              onError: (error) => {
+                if (error.message === 'ALREADY_RATED') setRateSheetOpen(false);
+              },
+            },
+          );
+        }}
+        origin={cardData.origin}
+        destination={cardData.destination}
+        driverFirstName={cardData.driverFirstName}
+        isLoading={rateMutation.isPending}
+        error={rateMutation.isError && rateMutation.error.message !== 'ALREADY_RATED' ? errorMessageFor(rateMutation.error) : undefined}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
+  rating: { gap: spacing.sm },
 });

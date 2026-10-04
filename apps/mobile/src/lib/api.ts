@@ -41,6 +41,10 @@ export async function fetchMyBooking(client: AppSupabaseClient, bookingId: strin
   return unwrap(await client.rpc('get_my_booking', { p_booking_id: bookingId }));
 }
 
+export async function fetchMyPendingRating(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('get_my_pending_rating'));
+}
+
 export async function fetchSearchTrips(
   client: AppSupabaseClient,
   originStopId: string,
@@ -104,6 +108,17 @@ export async function bookSeats(
 
 export async function cancelBooking(client: AppSupabaseClient, bookingId: string) {
   return unwrap(await client.rpc('cancel_booking', { p_booking_id: bookingId }));
+}
+
+export async function rateBooking(
+  client: AppSupabaseClient,
+  bookingId: string,
+  stars: number,
+  comment?: string,
+) {
+  return unwrap(
+    await client.rpc('rate_booking', { p_booking_id: bookingId, p_stars: stars, p_comment: comment || undefined }),
+  );
 }
 
 // ---------------------------------------------------------------------------
