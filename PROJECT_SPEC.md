@@ -40,7 +40,7 @@ UI polish is secondary to all of the above.
 |---|---|---|
 | P1 Splash / Welcome | Branding, "Get Started", "Login" | — |
 | P2 Select route (From / To / Passengers / Popular routes) | From/To selection from **known stops**, seat stepper, route list with fare | From/To are picked from the admin-managed stop list (no free-text geocoding: no Maps API). |
-| P3 Available autos ("Arriving in 4 min", rating 4.7) | Auto number, seats available, driver first name, fare/seat, Book Seat | **"Arriving in X min" → "≈ 1.2 km away"** (straight-line; we have no road ETA). **Ratings dropped from V1** (no rating system yet). |
+| P3 Available autos ("Arriving in 4 min", rating 4.7) | Auto number, seats available, driver first name, fare/seat, Book Seat | **"Arriving in X min" → "≈ 1.2 km away"** (straight-line; we have no road ETA). **Ratings not shown here yet**: passengers rate completed rides (see `ride_ratings`), but driver averages are not surfaced in search. |
 | P4 Confirm booking (seat preference) | Route, fare, seats, passenger name, Confirm | Seat preference kept as a **non-binding note** to the driver **[ASSUMPTION A6]**. No seat-number assignment. |
 | P5 Booking confirmed (#SA1001, View live location, Cancel) | Booking code, auto, driver, Cancel | "ETA 4 minutes" → live straight-line distance. "View live location" → **live distance + last-updated time**, no embedded map **[ASSUMPTION A9]**. |
 | D1 Driver home (Offline, earnings, My Auto, Select Route, Go Online) | All | — |
@@ -165,7 +165,7 @@ See [STATE_MACHINES.md](STATE_MACHINES.md). A booking does **not** imply boardin
 | `min_location_update_interval_seconds` | 3 | server-side throttle |
 
 ## 8. Non-goals for V1
-Google Maps / any map SDK, road ETA, routing APIs, payment gateway (Razorpay etc.), stored-value wallet, ratings & reviews, seat-number assignment, intermediate stops / partial-route fares, push notifications (in-app realtime only), trip reassignment, AWS, Redis, microservices, AI services, location history.
+Google Maps / any map SDK, road ETA, routing APIs, payment gateway (Razorpay etc.), stored-value wallet, public reviews / rating display, seat-number assignment, intermediate stops / partial-route fares, push notifications (in-app realtime only), trip reassignment, AWS, Redis, microservices, AI services, location history.
 
 ## 9. Quality rules
 TypeScript strict; no unnecessary `any`; no secrets in git; env vars for configuration; all schema changes via migrations; critical operations validated server-side (DB functions), client validation for UX only; booking transactional and idempotent; ledger append-only and auditable; no duplicated state (derive occupancy, reachability, balances); every assumption documented.

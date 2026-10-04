@@ -72,6 +72,8 @@ export const ERROR_MESSAGES = {
   DRIVER_ID_REQUIRED: 'Driver is required.',
   LEDGER_IMMUTABLE: 'Ledger records cannot be changed.',
   LEDGER_UNBALANCED: 'Ledger transaction is unbalanced.',
+  RATING_INVALID: 'Please choose 1 to 5 stars and keep the comment under 500 characters.',
+  ALREADY_RATED: 'You have already rated this ride.',
 } as const;
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
 

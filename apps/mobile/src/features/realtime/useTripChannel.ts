@@ -29,6 +29,8 @@ function invalidateTripQueries(tripId: string) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.myActiveBooking });
   void queryClient.invalidateQueries({ queryKey: ['my-booking'] });
   void queryClient.invalidateQueries({ queryKey: ['my-booking-history'] });
+  // A completed trip leaves the passenger a ride to rate.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.myPendingRating });
 }
 
 /**

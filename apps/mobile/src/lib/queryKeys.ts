@@ -5,6 +5,7 @@ export const queryKeys = {
   myActiveBooking: ['my-active-booking'] as const,
   myBookingHistory: (before?: string) => ['my-booking-history', { before }] as const,
   myBooking: (id: string) => ['my-booking', id] as const,
+  myPendingRating: ['my-pending-rating'] as const,
   searchTrips: (origin: string, destination: string) => ['search-trips', { origin, destination }] as const,
 
   // Driver
