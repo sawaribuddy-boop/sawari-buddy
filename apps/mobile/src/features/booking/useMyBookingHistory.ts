@@ -10,7 +10,7 @@ const PAGE_SIZE = 20;
  * Paginated booking history (all statuses). Uses cursor-based infinite query:
  * pass the last row's `created_at` as the cursor for the next page.
  */
-export function useMyBookingHistory() {
+export function useMyBookingHistory({ enabled = true }: { enabled?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.myBookingHistory(),
     queryFn: ({ pageParam }) => {
@@ -23,6 +23,6 @@ export function useMyBookingHistory() {
       const last = lastPage[lastPage.length - 1] as { created_at?: string } | undefined;
       return last?.created_at;
     },
-    enabled: !!supabase,
+    enabled: enabled && !!supabase,
   });
 }

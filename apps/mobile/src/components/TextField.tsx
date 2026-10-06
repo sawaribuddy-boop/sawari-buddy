@@ -11,7 +11,7 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   hint?: string;
 }
 
-export function TextField({ label, error, hint, onFocus, onBlur, editable = true, ...rest }: TextFieldProps) {
+export function TextField({ label, error, hint, onFocus, onBlur, editable = true, multiline, ...rest }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
   const borderColor = error ? colors.danger : focused ? colors.green600 : colors.border;
   return (
@@ -22,6 +22,7 @@ export function TextField({ label, error, hint, onFocus, onBlur, editable = true
       <TextInput
         {...rest}
         editable={editable}
+        multiline={multiline}
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
         placeholderTextColor={colors.ink400}
@@ -33,7 +34,7 @@ export function TextField({ label, error, hint, onFocus, onBlur, editable = true
           setFocused(false);
           onBlur?.(e);
         }}
-        style={[styles.input, { borderColor }, !editable && styles.readOnly]}
+        style={[styles.input, multiline && styles.multiline, { borderColor }, !editable && styles.readOnly]}
       />
       {error ? (
         <AppText variant="caption" color={colors.danger}>
@@ -60,5 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.ink900,
   },
+  // Android centres multiline text vertically and iOS adds no top padding: pin text to the top on both.
+  multiline: { minHeight: 96, paddingTop: spacing.md, paddingBottom: spacing.md, textAlignVertical: 'top' },
   readOnly: { backgroundColor: colors.background, color: colors.ink500 },
 });

@@ -16,6 +16,8 @@ export default function PassengerLayout() {
   return (
     <>
       <Tabs
+        // Back returns to the previous screen (e.g. Profile → Edit profile → Profile), not to the first tab.
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.green700,
@@ -32,6 +34,9 @@ export default function PassengerLayout() {
         <Tabs.Screen name="search-results" options={{ href: null }} />
         <Tabs.Screen name="confirm" options={{ href: null }} />
         <Tabs.Screen name="booking-detail" options={{ href: null }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null }} />
+        <Tabs.Screen name="change-password" options={{ href: null }} />
+        <Tabs.Screen name="report-problem" options={{ href: null }} />
       </Tabs>
       <PendingRatingPrompt />
     </>

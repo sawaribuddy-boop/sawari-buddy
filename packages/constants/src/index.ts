@@ -74,6 +74,8 @@ export const ERROR_MESSAGES = {
   LEDGER_UNBALANCED: 'Ledger transaction is unbalanced.',
   RATING_INVALID: 'Please choose 1 to 5 stars and keep the comment under 500 characters.',
   ALREADY_RATED: 'You have already rated this ride.',
+  ACTIVE_BOOKING_EXISTS: 'Finish or cancel your current booking first.',
+  SETTLEMENT_PENDING: 'Settle your balance with SawariBuddy before deleting your account. Please contact support.',
 } as const;
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
 

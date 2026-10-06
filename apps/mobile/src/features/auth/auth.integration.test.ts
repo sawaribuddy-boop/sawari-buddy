@@ -68,7 +68,7 @@ describe('mobile auth against local Supabase (LAN)', () => {
     expect(map.has(`${STORAGE_KEY}.n`)).toBe(true);
     expect(await loadAccount(client, newUserId)).toEqual({
       kind: 'ok',
-      account: { userId: newUserId, role: 'PASSENGER', fullName: 'Test Passenger', email, driverStatus: null },
+      account: { userId: newUserId, role: 'PASSENGER', fullName: 'Test Passenger', email, phone: null, licenseNumber: null, driverStatus: null },
     });
   });
 
