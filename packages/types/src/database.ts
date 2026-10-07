@@ -777,6 +777,24 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"go_online":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "accuracy_m": number | null,
+"active_trip_id": string | null,
+"driver_id": string,
+"is_online": boolean,
+"last_seen_at": string | null,
+"lat": number | null,
+"lng": number | null,
+"location_at": string | null,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "driver_presence"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "mark_boarded":
 { Args: { "p_booking_id": string }; Returns: {
               "boarded_at": string | null,
