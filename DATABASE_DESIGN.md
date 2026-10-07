@@ -14,6 +14,8 @@
 | `20261004000100_ride_ratings.sql` | `ride_ratings`; `rate_booking`, `get_my_pending_rating`; rating fields on `get_my_booking` / `get_my_booking_history` |
 | `20261006000100_delete_my_account.sql` | `delete_my_account`: in-app account deletion (anonymise profile, remove login, keep history) |
 | `20261006000200_driver_trip_history.sql` | `get_driver_trip_history` for the driver Profile → Trip history screen |
+| `20260927000700_go_online.sql`, `20260927000800_booking_broadcast.sql` | From the phase-3 i18n branch; already applied to the hosted project, added to the repo so histories match. `go_online()` kept for builds from that branch |
+| `20261008000100_remove_duplicate_booking_broadcast.sql` | Restores `book_seats` without the manual broadcast (the bookings trigger already sends `booking_changed`) |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
