@@ -27,6 +27,10 @@ export function authErrorMessage(error: AuthErrorLike | null | undefined): strin
       return 'Sign-up is currently disabled.';
     case 'email_not_confirmed':
       return 'Please confirm your email address first.';
+    case 'otp_expired':
+      return 'That code is wrong or has expired. Request a new one.';
+    case 'same_password':
+      return 'Choose a password different from your current one.';
     default:
       break;
   }

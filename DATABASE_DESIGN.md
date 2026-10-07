@@ -12,6 +12,8 @@
 | `20260926000600_read_functions.sql` | read RPCs (search, active booking, manifest, public settings, earnings) |
 | `20260926000700_rls_grants_realtime_cron.sql` | table/function privileges, RLS policies, Realtime channel authorisation + broadcast triggers, pg_cron schedule |
 | `20261004000100_ride_ratings.sql` | `ride_ratings`; `rate_booking`, `get_my_pending_rating`; rating fields on `get_my_booking` / `get_my_booking_history` |
+| `20261006000100_delete_my_account.sql` | `delete_my_account`: in-app account deletion (anonymise profile, remove login, keep history) |
+| `20261006000200_driver_trip_history.sql` | `get_driver_trip_history` for the driver Profile → Trip history screen |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -166,6 +168,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `raise_issue` | passenger / driver | complaint about own booking/trip |
 | `rate_booking(booking, stars, comment?)` | passenger | rate own `COMPLETED` booking once (`ALREADY_RATED`, `RATING_INVALID`) |
 | `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
+| `delete_my_account()` | passenger / driver | anonymise own profile (name → "Deleted user", email/phone cleared, rating comments removed), suspend, delete login; refused with an active booking/trip (`ACTIVE_BOOKING_EXISTS`, `ACTIVE_TRIP_EXISTS`) or a driver's unsettled balance (`SETTLEMENT_PENDING`) |
+| `get_driver_trip_history(limit?, before?)` | driver | own COMPLETED/CANCELLED trips, newest first, with passengers, seats, fares and fees from completed bookings |
 | `admin_set_user_role` | admin | promote to driver/admin |
 | `search_trips(origin, destination)` | signed-in | bookable trips with server-computed `available_seats` and driver location |
 | `get_my_active_booking()` | passenger | booking + trip + auto + driver reachability/location |

@@ -696,6 +696,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"delete_my_account":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "driver_earnings_summary":
 { Args: { "p_driver_id"?: string,"p_from"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -731,6 +734,9 @@ isOneToOne: false
       } },
 "get_driver_home":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"get_driver_trip_history":
+{ Args: { "p_before"?: string,"p_limit"?: number }; Returns: Json
                            },
 "get_my_active_booking":
 { Args: Record<PropertyKey, never>; Returns: Json

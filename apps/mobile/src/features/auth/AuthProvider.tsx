@@ -21,6 +21,14 @@ export interface AuthContextValue {
   signOut(): Promise<void>;
   retry(): Promise<void>;
   clearNotice(): void;
+  /** Reload the account after the user changed it (name, phone). */
+  refreshAccount(): Promise<void>;
+  /** Re-checks the current password, then sets the new one. */
+  changePassword(currentPassword: string, newPassword: string): Promise<{ error: string | null }>;
+  /** Emails a 6-digit reset code (supabase/templates/recovery.html). Same result whether or not the email exists. */
+  requestPasswordReset(email: string): Promise<{ error: string | null }>;
+  /** Verifies the emailed code, sets the new password, and signs the user in. */
+  resetPassword(email: string, code: string, newPassword: string): Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,6 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState<BlockReason | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
+  // While a password reset runs, the recovery sign-in must not route the user into the app
+  // before the new password is saved.
+  const resettingRef = useRef(false);
 
   /**
    * Resolve app state for a session: signed out, or load the account from the database.
@@ -92,8 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = client.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (event === 'INITIAL_SESSION') return; // handled by getSession above
-      if (event === 'TOKEN_REFRESHED' && session?.user.id === sessionRef.current?.user.id) {
+      if (resettingRef.current) return; // resetPassword resolves the session itself
+      if (session && event !== 'SIGNED_OUT' && session.user.id === sessionRef.current?.user.id) {
+        // Same user (token refresh, re-entering the password, password change): update quietly,
+        // without the loading screen that would reset navigation.
         sessionRef.current = session;
+        if (event !== 'TOKEN_REFRESHED') setTimeout(() => void resolve(session, true), 0);
         return;
       }
       // Defer out of the auth callback (supabase-js guidance: no awaiting auth calls inside it).
@@ -147,9 +162,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearNotice = useCallback(() => setNotice(null), []);
 
+  const refreshAccount = useCallback(async () => {
+    if (sessionRef.current) await resolve(sessionRef.current, true);
+  }, [resolve]);
+
+  const changePassword = useCallback<AuthContextValue['changePassword']>(async (currentPassword, newPassword) => {
+    const email = sessionRef.current?.user.email;
+    if (!supabase || !email) return { error: 'Something went wrong. Please try again.' };
+    const check = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+    if (check.error) {
+      return { error: check.error.code === 'invalid_credentials' ? 'Your current password is incorrect.' : authErrorMessage(check.error) };
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error ? authErrorMessage(error) : null };
+  }, []);
+
+  const requestPasswordReset = useCallback<AuthContextValue['requestPasswordReset']>(async (email) => {
+    if (!supabase) return { error: 'The app is not configured. See the connection check.' };
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error ? authErrorMessage(error) : null };
+  }, []);
+
+  const resetPassword = useCallback<AuthContextValue['resetPassword']>(
+    async (email, code, newPassword) => {
+      if (!supabase) return { error: 'The app is not configured. See the connection check.' };
+      resettingRef.current = true;
+      try {
+        const verified = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
+        if (verified.error || !verified.data.session) return { error: authErrorMessage(verified.error) };
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          await endLocalSession(); // don't leave a half-finished recovery session signed in
+          return { error: authErrorMessage(error) };
+        }
+        setNotice(null);
+        await resolve(verified.data.session);
+        return { error: null };
+      } finally {
+        resettingRef.current = false;
+      }
+    },
+    [resolve],
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({ status, account, notice, errorMessage, signIn, signUp, signOut, retry, clearNotice }),
-    [status, account, notice, errorMessage, signIn, signUp, signOut, retry, clearNotice],
+    () => ({
+      status,
+      account,
+      notice,
+      errorMessage,
+      signIn,
+      signUp,
+      signOut,
+      retry,
+      clearNotice,
+      refreshAccount,
+      changePassword,
+      requestPasswordReset,
+      resetPassword,
+    }),
+    [
+      status,
+      account,
+      notice,
+      errorMessage,
+      signIn,
+      signUp,
+      signOut,
+      retry,
+      clearNotice,
+      refreshAccount,
+      changePassword,
+      requestPasswordReset,
+      resetPassword,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

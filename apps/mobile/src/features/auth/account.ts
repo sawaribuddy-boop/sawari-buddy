@@ -12,6 +12,9 @@ export interface Account {
   role: MobileRole;
   fullName: string;
   email: string | null;
+  phone: string | null;
+  /** Only for drivers. */
+  licenseNumber: string | null;
   /** Only for drivers. Non-ACTIVE drivers can sign in but the server refuses driver actions. */
   driverStatus: Enums<'driver_status'> | null;
 }
@@ -46,7 +49,7 @@ export const BLOCK_MESSAGES: Record<BlockReason, { title: string; message: strin
 export async function loadAccount(client: AppSupabaseClient, userId: string): Promise<AccountResult> {
   const { data: profile, error } = await client
     .from('profiles')
-    .select('id, role, full_name, email, status')
+    .select('id, role, full_name, email, phone, status')
     .eq('id', userId)
     .maybeSingle();
 
@@ -56,15 +59,29 @@ export async function loadAccount(client: AppSupabaseClient, userId: string): Pr
   if (profile.role === 'ADMIN') return { kind: 'blocked', reason: 'ADMIN_NOT_SUPPORTED' };
 
   let driverStatus: Enums<'driver_status'> | null = null;
+  let licenseNumber: string | null = null;
   if (profile.role === 'DRIVER') {
-    const { data: driver, error: driverError } = await client.from('drivers').select('status').eq('id', userId).maybeSingle();
+    const { data: driver, error: driverError } = await client
+      .from('drivers')
+      .select('status, license_number')
+      .eq('id', userId)
+      .maybeSingle();
     if (driverError) return { kind: 'error', message: driverError.message };
     if (!driver) return { kind: 'blocked', reason: 'DRIVER_RECORD_MISSING' };
     driverStatus = driver.status;
+    licenseNumber = driver.license_number;
   }
 
   return {
     kind: 'ok',
-    account: { userId, role: profile.role, fullName: profile.full_name, email: profile.email, driverStatus },
+    account: {
+      userId,
+      role: profile.role,
+      fullName: profile.full_name,
+      email: profile.email,
+      phone: profile.phone,
+      licenseNumber,
+      driverStatus,
+    },
   };
 }

@@ -133,7 +133,9 @@ export function useHeartbeat(enabled: boolean) {
       if (nextState === 'active') {
         clearTimer();
         void tick();
-      } else {
+      } else if (nextState === 'background') {
+        // iOS reports 'inactive' for Control Center, incoming-call banners and the app switcher;
+        // the app is still running then, so keep the heartbeat going.
         clearTimer();
         setState((s) => ({ ...s, isRunning: false }));
       }

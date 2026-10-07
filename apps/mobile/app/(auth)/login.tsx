@@ -89,6 +89,17 @@ export default function LoginScreen() {
           onSubmitEditing={() => void submit()}
         />
 
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push({ pathname: '/forgot-password', params: email.trim() ? { email: email.trim() } : {} })}
+          hitSlop={8}
+          style={styles.forgot}
+        >
+          <AppText variant="small" color={colors.green700} style={styles.link}>
+            Forgot password?
+          </AppText>
+        </Pressable>
+
         <Pressable accessibilityRole="link" onPress={() => router.replace('/signup')} hitSlop={8}>
           <AppText variant="small" color={colors.ink500} align="center">
             New to SawariBuddy?{' '}
@@ -131,6 +142,7 @@ const styles = StyleSheet.create({
   body: { gap: spacing.lg },
   header: { gap: spacing.xs },
   link: { fontWeight: '700' },
+  forgot: { alignSelf: 'flex-end' },
   dev: { marginTop: spacing.lg, gap: spacing.sm, padding: spacing.md, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.ink300 },
   devRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

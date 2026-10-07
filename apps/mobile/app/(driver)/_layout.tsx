@@ -28,6 +28,10 @@ export default function DriverLayout() {
         <Stack.Screen name="driver/trip-in-progress" options={{ headerShown: false }} />
         <Stack.Screen name="driver/earnings" options={{ headerShown: false }} />
         <Stack.Screen name="driver/profile" options={{ title: 'Profile' }} />
+        <Stack.Screen name="driver/edit-profile" options={{ title: 'Edit profile' }} />
+        <Stack.Screen name="driver/change-password" options={{ title: 'Change password' }} />
+        <Stack.Screen name="driver/report-problem" options={{ title: 'Report a problem' }} />
+        <Stack.Screen name="driver/trips" options={{ title: 'Trip history' }} />
       </Stack>
       <Toast message={toast} onDismiss={() => setToast(null)} />
     </View>

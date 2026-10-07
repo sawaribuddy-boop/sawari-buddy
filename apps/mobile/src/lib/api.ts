@@ -6,6 +6,7 @@ import type { Database } from '@sawari/types';
 import type { AppSupabaseClient } from './supabase';
 
 type TripCancelReason = Database['public']['Enums']['trip_cancel_reason'];
+export type IssueKind = Database['public']['Enums']['issue_kind'];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,6 +67,18 @@ export async function fetchDriverHome(client: AppSupabaseClient) {
   return unwrap(await client.rpc('get_driver_home'));
 }
 
+export async function fetchDriverTripHistory(
+  client: AppSupabaseClient,
+  opts: { limit?: number; before?: string } = {},
+) {
+  return unwrap(
+    await client.rpc('get_driver_trip_history', {
+      p_limit: opts.limit ?? 20,
+      p_before: opts.before,
+    }),
+  );
+}
+
 export async function fetchTripManifest(client: AppSupabaseClient, tripId: string) {
   return unwrap(await client.rpc('get_trip_manifest', { p_trip_id: tripId }));
 }
@@ -119,6 +132,41 @@ export async function rateBooking(
   return unwrap(
     await client.rpc('rate_booking', { p_booking_id: bookingId, p_stars: stars, p_comment: comment || undefined }),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Account and support (passenger and driver)
+// ---------------------------------------------------------------------------
+
+/** Name and phone are the only profile columns users may change (column grant + RLS on profiles). */
+export async function updateMyProfile(
+  client: AppSupabaseClient,
+  userId: string,
+  changes: { fullName: string; phone: string | null },
+) {
+  const { error } = await client
+    .from('profiles')
+    .update({ full_name: changes.fullName, phone: changes.phone })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function raiseIssue(
+  client: AppSupabaseClient,
+  issue: { kind: IssueKind; description: string; bookingId?: string; tripId?: string },
+) {
+  return unwrap(
+    await client.rpc('raise_issue', {
+      p_kind: issue.kind,
+      p_description: issue.description,
+      p_booking_id: issue.bookingId,
+      p_trip_id: issue.tripId,
+    }),
+  );
+}
+
+export async function deleteMyAccount(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('delete_my_account'));
 }
 
 // ---------------------------------------------------------------------------
