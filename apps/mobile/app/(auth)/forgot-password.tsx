@@ -8,7 +8,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { colors, spacing } from '@/theme';
 
 /**
- * Two steps on one screen: email → 6-digit code by email (supabase/templates/recovery.html) →
+ * Two steps on one screen: email → code by email (supabase/templates/recovery.html) →
  * code + new password. On success the user is signed in and the navigator moves on.
  */
 export default function ForgotPasswordScreen() {
@@ -74,8 +74,8 @@ export default function ForgotPasswordScreen() {
           <AppText variant="title">Reset password</AppText>
           <AppText color={colors.ink500}>
             {step === 'email'
-              ? "Enter your account's email. We'll send you a 6-digit code."
-              : `If an account exists for ${email}, we've emailed it a 6-digit code. It expires in 1 hour.`}
+              ? "Enter your account's email. We'll send you a code."
+              : `If an account exists for ${email}, we've emailed it a code. It expires in 1 hour.`}
           </AppText>
         </View>
 
@@ -99,13 +99,13 @@ export default function ForgotPasswordScreen() {
         ) : (
           <>
             <TextField
-              label="6-digit code"
+              label="Code from the email"
               value={code}
               onChangeText={setCode}
               error={errors.code}
-              placeholder="123456"
+              placeholder="12345678"
               keyboardType="number-pad"
-              maxLength={6}
+              maxLength={10}
               autoComplete="one-time-code"
               textContentType="oneTimeCode"
               returnKeyType="next"

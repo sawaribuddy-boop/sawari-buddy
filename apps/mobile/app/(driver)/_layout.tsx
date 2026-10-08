@@ -32,6 +32,7 @@ export default function DriverLayout() {
         <Stack.Screen name="driver/change-password" options={{ title: 'Change password' }} />
         <Stack.Screen name="driver/report-problem" options={{ title: 'Report a problem' }} />
         <Stack.Screen name="driver/trips" options={{ title: 'Trip history' }} />
+        <Stack.Screen name="driver/collect-payment" options={{ title: 'Collect payment' }} />
       </Stack>
       <Toast message={toast} onDismiss={() => setToast(null)} />
     </View>

@@ -20,6 +20,8 @@ export interface DriverTripHistoryItem {
   seat_count: number;
   fare_paise: number;
   platform_fee_paise: number;
+  unpaid_count: number;
+  payment_pending_count: number;
 }
 
 /** The driver's completed and cancelled trips, newest first (cursor: last row's created_at). */

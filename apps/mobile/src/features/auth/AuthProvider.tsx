@@ -25,7 +25,7 @@ export interface AuthContextValue {
   refreshAccount(): Promise<void>;
   /** Re-checks the current password, then sets the new one. */
   changePassword(currentPassword: string, newPassword: string): Promise<{ error: string | null }>;
-  /** Emails a 6-digit reset code (supabase/templates/recovery.html). Same result whether or not the email exists. */
+  /** Emails a reset code (supabase/templates/recovery.html). Same result whether or not the email exists. */
   requestPasswordReset(email: string): Promise<{ error: string | null }>;
   /** Verifies the emailed code, sets the new password, and signs the user in. */
   resetPassword(email: string, code: string, newPassword: string): Promise<{ error: string | null }>;

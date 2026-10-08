@@ -89,13 +89,13 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "boarded_at": string | null,"cancel_reason": Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at": string | null,"cancelled_by": string | null,"code": string,"completed_at": string | null,"created_at": string,"created_by": string,"fare_per_seat_paise": number,"id": string,"idempotency_key": string,"no_show_at": string | null,"no_show_marked_by": string | null,"passenger_id": string | null,"payment_method": Database["public"]['Enums']["payment_method"],"platform_fee_paise": number,"seat_count": number,"seat_preference": Database["public"]['Enums']["seat_preference"],"source": Database["public"]['Enums']["booking_source"],"status": Database["public"]['Enums']["booking_status"],"total_fare_paise": number,"trip_id": string,"updated_at": string,"walk_in_label": string | null
+                    "boarded_at": string | null,"cancel_reason": Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at": string | null,"cancelled_by": string | null,"code": string,"completed_at": string | null,"created_at": string,"created_by": string,"fare_per_seat_paise": number,"id": string,"idempotency_key": string,"no_show_at": string | null,"no_show_marked_by": string | null,"passenger_id": string | null,"payment_marked_at": string | null,"payment_marked_by": string | null,"payment_method": Database["public"]['Enums']["payment_method"],"payment_status": Database["public"]['Enums']["payment_status"] | null,"platform_fee_paise": number,"seat_count": number,"seat_preference": Database["public"]['Enums']["seat_preference"],"source": Database["public"]['Enums']["booking_source"],"status": Database["public"]['Enums']["booking_status"],"total_fare_paise": number,"trip_id": string,"updated_at": string,"walk_in_label": string | null
                   }
                   Insert: {
-                    "boarded_at"?: string | null,"cancel_reason"?: Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"code"?: string,"completed_at"?: string | null,"created_at"?: string,"created_by": string,"fare_per_seat_paise": number,"id"?: string,"idempotency_key": string,"no_show_at"?: string | null,"no_show_marked_by"?: string | null,"passenger_id"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"],"platform_fee_paise": number,"seat_count": number,"seat_preference"?: Database["public"]['Enums']["seat_preference"],"source": Database["public"]['Enums']["booking_source"],"status": Database["public"]['Enums']["booking_status"],"total_fare_paise": number,"trip_id": string,"updated_at"?: string,"walk_in_label"?: string | null
+                    "boarded_at"?: string | null,"cancel_reason"?: Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"code"?: string,"completed_at"?: string | null,"created_at"?: string,"created_by": string,"fare_per_seat_paise": number,"id"?: string,"idempotency_key": string,"no_show_at"?: string | null,"no_show_marked_by"?: string | null,"passenger_id"?: string | null,"payment_marked_at"?: string | null,"payment_marked_by"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"],"payment_status"?: Database["public"]['Enums']["payment_status"] | null,"platform_fee_paise": number,"seat_count": number,"seat_preference"?: Database["public"]['Enums']["seat_preference"],"source": Database["public"]['Enums']["booking_source"],"status": Database["public"]['Enums']["booking_status"],"total_fare_paise": number,"trip_id": string,"updated_at"?: string,"walk_in_label"?: string | null
                   }
                   Update: {
-                    "boarded_at"?: string | null,"cancel_reason"?: Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"code"?: string,"completed_at"?: string | null,"created_at"?: string,"created_by"?: string,"fare_per_seat_paise"?: number,"id"?: string,"idempotency_key"?: string,"no_show_at"?: string | null,"no_show_marked_by"?: string | null,"passenger_id"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"],"platform_fee_paise"?: number,"seat_count"?: number,"seat_preference"?: Database["public"]['Enums']["seat_preference"],"source"?: Database["public"]['Enums']["booking_source"],"status"?: Database["public"]['Enums']["booking_status"],"total_fare_paise"?: number,"trip_id"?: string,"updated_at"?: string,"walk_in_label"?: string | null
+                    "boarded_at"?: string | null,"cancel_reason"?: Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"code"?: string,"completed_at"?: string | null,"created_at"?: string,"created_by"?: string,"fare_per_seat_paise"?: number,"id"?: string,"idempotency_key"?: string,"no_show_at"?: string | null,"no_show_marked_by"?: string | null,"passenger_id"?: string | null,"payment_marked_at"?: string | null,"payment_marked_by"?: string | null,"payment_method"?: Database["public"]['Enums']["payment_method"],"payment_status"?: Database["public"]['Enums']["payment_status"] | null,"platform_fee_paise"?: number,"seat_count"?: number,"seat_preference"?: Database["public"]['Enums']["seat_preference"],"source"?: Database["public"]['Enums']["booking_source"],"status"?: Database["public"]['Enums']["booking_status"],"total_fare_paise"?: number,"trip_id"?: string,"updated_at"?: string,"walk_in_label"?: string | null
                   }
                   Relationships: [
                     {
@@ -119,6 +119,12 @@ isOneToOne: false
     },{
       foreignKeyName: "bookings_passenger_id_fkey"
       columns: ["passenger_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bookings_payment_marked_by_fkey"
+      columns: ["payment_marked_by"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -509,7 +515,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -542,7 +551,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -592,7 +604,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -625,7 +640,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -735,6 +753,9 @@ isOneToOne: false
 "get_driver_home":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"get_driver_payments_to_collect":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_driver_trip_history":
 { Args: { "p_before"?: string,"p_limit"?: number }; Returns: Json
                            },
@@ -811,7 +832,46 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
+"platform_fee_paise": number,
+"seat_count": number,
+"seat_preference": Database["public"]['Enums']["seat_preference"],
+"source": Database["public"]['Enums']["booking_source"],
+"status": Database["public"]['Enums']["booking_status"],
+"total_fare_paise": number,
+"trip_id": string,
+"updated_at": string,
+"walk_in_label": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"mark_booking_payment":
+{ Args: { "p_booking_id": string,"p_received": boolean }; Returns: {
+              "boarded_at": string | null,
+"cancel_reason": Database["public"]['Enums']["booking_cancel_reason"] | null,
+"cancelled_at": string | null,
+"cancelled_by": string | null,
+"code": string,
+"completed_at": string | null,
+"created_at": string,
+"created_by": string,
+"fare_per_seat_paise": number,
+"id": string,
+"idempotency_key": string,
+"no_show_at": string | null,
+"no_show_marked_by": string | null,
+"passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
+"payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -844,7 +904,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -949,7 +1012,10 @@ isOneToOne: false
 "no_show_at": string | null,
 "no_show_marked_by": string | null,
 "passenger_id": string | null,
+"payment_marked_at": string | null,
+"payment_marked_by": string | null,
 "payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"] | null,
 "platform_fee_paise": number,
 "seat_count": number,
 "seat_preference": Database["public"]['Enums']["seat_preference"],
@@ -1027,7 +1093,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "account_status": "ACTIVE"|"SUSPENDED","auto_status": "ACTIVE"|"INACTIVE","booking_cancel_reason": "PASSENGER_CANCELLED"|"TRIP_CANCELLED"|"DRIVER_UNREACHABLE"|"WALK_IN_REMOVED"|"ADMIN_CANCELLED","booking_source": "APP"|"WALK_IN","booking_status": "CONFIRMED"|"BOARDED"|"COMPLETED"|"CANCELLED"|"NO_SHOW","driver_status": "PENDING_VERIFICATION"|"ACTIVE"|"SUSPENDED","issue_kind": "DRIVER_UNREACHABLE"|"TRIP_STUCK"|"BOOKING_ISSUE"|"DRIVER_BEHAVIOUR"|"PAYMENT"|"OTHER","issue_source": "PASSENGER"|"DRIVER"|"SYSTEM","issue_status": "OPEN"|"IN_REVIEW"|"RESOLVED"|"CLOSED","ledger_account_type": "PASSENGER_CREDIT"|"DRIVER_SETTLEMENT"|"PLATFORM_REVENUE"|"PLATFORM_CASH"|"PAYMENT_CLEARING","ledger_entry_type": "PAYMENT"|"BOOKING_DEBIT"|"REFUND_CREDIT"|"ADJUSTMENT"|"DRIVER_EARNING"|"PLATFORM_FEE"|"SETTLEMENT","payment_method": "CASH","seat_preference": "ANY"|"BACK"|"FRONT","trip_cancel_reason": "DRIVER_CANCELLED"|"DRIVER_OFFLINE"|"DRIVER_UNREACHABLE"|"ADMIN_CANCELLED","trip_status": "OPEN"|"BOARDING"|"IN_PROGRESS"|"COMPLETED"|"CANCELLED"|"SUSPENDED","user_role": "PASSENGER"|"DRIVER"|"ADMIN"
+            "account_status": "ACTIVE"|"SUSPENDED","auto_status": "ACTIVE"|"INACTIVE","booking_cancel_reason": "PASSENGER_CANCELLED"|"TRIP_CANCELLED"|"DRIVER_UNREACHABLE"|"WALK_IN_REMOVED"|"ADMIN_CANCELLED","booking_source": "APP"|"WALK_IN","booking_status": "CONFIRMED"|"BOARDED"|"COMPLETED"|"CANCELLED"|"NO_SHOW","driver_status": "PENDING_VERIFICATION"|"ACTIVE"|"SUSPENDED","issue_kind": "DRIVER_UNREACHABLE"|"TRIP_STUCK"|"BOOKING_ISSUE"|"DRIVER_BEHAVIOUR"|"PAYMENT"|"OTHER","issue_source": "PASSENGER"|"DRIVER"|"SYSTEM","issue_status": "OPEN"|"IN_REVIEW"|"RESOLVED"|"CLOSED","ledger_account_type": "PASSENGER_CREDIT"|"DRIVER_SETTLEMENT"|"PLATFORM_REVENUE"|"PLATFORM_CASH"|"PAYMENT_CLEARING","ledger_entry_type": "PAYMENT"|"BOOKING_DEBIT"|"REFUND_CREDIT"|"ADJUSTMENT"|"DRIVER_EARNING"|"PLATFORM_FEE"|"SETTLEMENT","payment_method": "CASH","payment_status": "PENDING"|"PAID"|"UNPAID","seat_preference": "ANY"|"BACK"|"FRONT","trip_cancel_reason": "DRIVER_CANCELLED"|"DRIVER_OFFLINE"|"DRIVER_UNREACHABLE"|"ADMIN_CANCELLED","trip_status": "OPEN"|"BOARDING"|"IN_PROGRESS"|"COMPLETED"|"CANCELLED"|"SUSPENDED","user_role": "PASSENGER"|"DRIVER"|"ADMIN"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1143,7 +1209,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "account_status": ["ACTIVE", "SUSPENDED"],"auto_status": ["ACTIVE", "INACTIVE"],"booking_cancel_reason": ["PASSENGER_CANCELLED", "TRIP_CANCELLED", "DRIVER_UNREACHABLE", "WALK_IN_REMOVED", "ADMIN_CANCELLED"],"booking_source": ["APP", "WALK_IN"],"booking_status": ["CONFIRMED", "BOARDED", "COMPLETED", "CANCELLED", "NO_SHOW"],"driver_status": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"],"issue_kind": ["DRIVER_UNREACHABLE", "TRIP_STUCK", "BOOKING_ISSUE", "DRIVER_BEHAVIOUR", "PAYMENT", "OTHER"],"issue_source": ["PASSENGER", "DRIVER", "SYSTEM"],"issue_status": ["OPEN", "IN_REVIEW", "RESOLVED", "CLOSED"],"ledger_account_type": ["PASSENGER_CREDIT", "DRIVER_SETTLEMENT", "PLATFORM_REVENUE", "PLATFORM_CASH", "PAYMENT_CLEARING"],"ledger_entry_type": ["PAYMENT", "BOOKING_DEBIT", "REFUND_CREDIT", "ADJUSTMENT", "DRIVER_EARNING", "PLATFORM_FEE", "SETTLEMENT"],"payment_method": ["CASH"],"seat_preference": ["ANY", "BACK", "FRONT"],"trip_cancel_reason": ["DRIVER_CANCELLED", "DRIVER_OFFLINE", "DRIVER_UNREACHABLE", "ADMIN_CANCELLED"],"trip_status": ["OPEN", "BOARDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", "SUSPENDED"],"user_role": ["PASSENGER", "DRIVER", "ADMIN"]
+            "account_status": ["ACTIVE", "SUSPENDED"],"auto_status": ["ACTIVE", "INACTIVE"],"booking_cancel_reason": ["PASSENGER_CANCELLED", "TRIP_CANCELLED", "DRIVER_UNREACHABLE", "WALK_IN_REMOVED", "ADMIN_CANCELLED"],"booking_source": ["APP", "WALK_IN"],"booking_status": ["CONFIRMED", "BOARDED", "COMPLETED", "CANCELLED", "NO_SHOW"],"driver_status": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"],"issue_kind": ["DRIVER_UNREACHABLE", "TRIP_STUCK", "BOOKING_ISSUE", "DRIVER_BEHAVIOUR", "PAYMENT", "OTHER"],"issue_source": ["PASSENGER", "DRIVER", "SYSTEM"],"issue_status": ["OPEN", "IN_REVIEW", "RESOLVED", "CLOSED"],"ledger_account_type": ["PASSENGER_CREDIT", "DRIVER_SETTLEMENT", "PLATFORM_REVENUE", "PLATFORM_CASH", "PAYMENT_CLEARING"],"ledger_entry_type": ["PAYMENT", "BOOKING_DEBIT", "REFUND_CREDIT", "ADJUSTMENT", "DRIVER_EARNING", "PLATFORM_FEE", "SETTLEMENT"],"payment_method": ["CASH"],"payment_status": ["PENDING", "PAID", "UNPAID"],"seat_preference": ["ANY", "BACK", "FRONT"],"trip_cancel_reason": ["DRIVER_CANCELLED", "DRIVER_OFFLINE", "DRIVER_UNREACHABLE", "ADMIN_CANCELLED"],"trip_status": ["OPEN", "BOARDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", "SUSPENDED"],"user_role": ["PASSENGER", "DRIVER", "ADMIN"]
           }
         }
 } as const

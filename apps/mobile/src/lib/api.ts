@@ -79,6 +79,10 @@ export async function fetchDriverTripHistory(
   );
 }
 
+export async function fetchDriverPaymentsToCollect(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('get_driver_payments_to_collect'));
+}
+
 export async function fetchTripManifest(client: AppSupabaseClient, tripId: string) {
   return unwrap(await client.rpc('get_trip_manifest', { p_trip_id: tripId }));
 }
@@ -187,6 +191,11 @@ export async function startTrip(client: AppSupabaseClient, tripId: string) {
 
 export async function completeTrip(client: AppSupabaseClient, tripId: string) {
   return unwrap(await client.rpc('complete_trip', { p_trip_id: tripId }));
+}
+
+/** Driver confirms whether a completed passenger paid the cash fare. */
+export async function markBookingPayment(client: AppSupabaseClient, bookingId: string, received: boolean) {
+  return unwrap(await client.rpc('mark_booking_payment', { p_booking_id: bookingId, p_received: received }));
 }
 
 export async function cancelTrip(client: AppSupabaseClient, tripId: string, reason?: TripCancelReason) {

@@ -57,6 +57,7 @@ select public.final_call(:'trip1'::uuid);
 select public.mark_boarded(:'priya_booking'::uuid);
 select public.start_trip(:'trip1'::uuid);
 select public.complete_trip(:'trip1'::uuid);
+select public.mark_booking_payment(:'priya_booking'::uuid, true);  -- driver received the cash
 
 -- =========================================================================
 -- get_my_booking_history: Priya sees her own bookings

@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import {
   useCancelTrip,
   useDriverHome,
+  useDriverPaymentsToCollect,
   useGoOffline,
   useHeartbeat,
   useOpenTrip,
@@ -53,6 +54,8 @@ const DRIVER_STATUS_NOTICE = {
 export default function DriverHomeScreen() {
   const { account } = useAuth();
   const { data: rawHome, isLoading, refetch } = useDriverHome();
+  const { data: payments } = useDriverPaymentsToCollect();
+  const pendingPayments = payments?.pending_count ?? 0;
   const { data: routes } = useRoutes();
   const { data: stops } = useStops();
   const openTripMutation = useOpenTrip();
@@ -152,6 +155,21 @@ export default function DriverHomeScreen() {
             title="Location permission denied"
             message="Passengers cannot see your location. Grant location access for a better experience."
           />
+        ) : null}
+
+        {/* Cash still to confirm from the last trip: blocks opening a new one */}
+        {pendingPayments > 0 ? (
+          <Card>
+            <View style={styles.paymentsDue}>
+              <AppText variant="bodyStrong">
+                Mark payment for {pendingPayments} {pendingPayments === 1 ? 'passenger' : 'passengers'}
+              </AppText>
+              <AppText variant="small" color={colors.ink500}>
+                Confirm who paid cash on your last trip before starting a new one.
+              </AppText>
+              <Button label="Collect payment" icon="cash-check" size="md" onPress={() => router.push('/driver/collect-payment')} />
+            </View>
+          </Card>
         ) : null}
 
         {/* Active trip card */}
@@ -333,6 +351,7 @@ export default function DriverHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  paymentsDue: { gap: spacing.sm },
   body: { gap: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: {

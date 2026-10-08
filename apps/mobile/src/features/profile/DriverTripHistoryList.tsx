@@ -42,6 +42,16 @@ function TripRow({ trip }: { trip: DriverTripHistoryItem }) {
             {trip.auto_registration}
           </AppText>
         )}
+        {completed && (trip.unpaid_count > 0 || trip.payment_pending_count > 0) ? (
+          <AppText variant="small" color={colors.warning}>
+            {[
+              trip.unpaid_count > 0 ? `${trip.unpaid_count} not paid` : null,
+              trip.payment_pending_count > 0 ? `${trip.payment_pending_count} payment to mark` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </AppText>
+        ) : null}
       </View>
     </Card>
   );

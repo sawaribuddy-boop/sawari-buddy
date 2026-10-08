@@ -39,7 +39,8 @@ export default function TripInProgressScreen() {
 
   const handleComplete = useCallback(() => {
     if (!tripId) return;
-    completeTripMutation.mutate(tripId, { onSuccess: () => router.back() });
+    // Next: confirm each passenger's cash on the Collect payment screen.
+    completeTripMutation.mutate(tripId, { onSuccess: () => router.replace('/driver/collect-payment') });
   }, [tripId, completeTripMutation, router]);
 
   useEffect(() => {

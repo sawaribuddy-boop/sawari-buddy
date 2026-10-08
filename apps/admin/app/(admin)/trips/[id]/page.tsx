@@ -54,6 +54,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
             <th style={styles.th}>Source</th>
             <th style={styles.th}>Seats</th>
             <th style={styles.th}>Status</th>
+            <th style={styles.th}>Payment</th>
             <th style={styles.th}>Actions</th>
           </tr>
         </thead>
@@ -66,6 +67,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
               <td style={styles.td}>
                 <span style={bookingBadge(b.status)}>{b.status}</span>
               </td>
+              <td style={styles.td}>{PAYMENT_LABEL[b.payment_status ?? ''] ?? '—'}</td>
               <td style={styles.td}>
                 {b.status === 'CONFIRMED' && (
                   <CancelBookingButton bookingId={b.id} tripId={trip.id} />
@@ -75,7 +77,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
           ))}
           {(!bookings || bookings.length === 0) && (
             <tr>
-              <td colSpan={5} style={{ ...styles.td, color: '#9ca3af', textAlign: 'center' }}>
+              <td colSpan={6} style={{ ...styles.td, color: '#9ca3af', textAlign: 'center' }}>
                 No bookings.
               </td>
             </tr>
@@ -100,6 +102,9 @@ function InfoCard({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+// Cash collection, set by the driver after the ride (COMPLETED bookings only).
+const PAYMENT_LABEL: Record<string, string> = { PENDING: 'Not marked yet', PAID: 'Cash received', UNPAID: 'Not paid' };
 
 function bookingBadge(status: string): React.CSSProperties {
   const base: React.CSSProperties = { padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500 };
