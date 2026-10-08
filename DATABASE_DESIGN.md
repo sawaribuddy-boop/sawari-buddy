@@ -16,6 +16,7 @@
 | `20261006000200_driver_trip_history.sql` | `get_driver_trip_history` for the driver Profile → Trip history screen |
 | `20260927000700_go_online.sql`, `20260927000800_booking_broadcast.sql` | From the phase-3 i18n branch; already applied to the hosted project, added to the repo so histories match. `go_online()` kept for builds from that branch |
 | `20261008000100_remove_duplicate_booking_broadcast.sql` | Restores `book_seats` without the manual broadcast (the bookings trigger already sends `booking_changed`) |
+| `20261008000200_cash_payment_collection.sql` | `bookings.payment_status` (PENDING/PAID/UNPAID); `complete_trip` no longer posts fares; `mark_booking_payment`, `get_driver_payments_to_collect`; new trips blocked while payments are PENDING |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -172,6 +173,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
 | `delete_my_account()` | passenger / driver | anonymise own profile (name → "Deleted user", email/phone cleared, rating comments removed), suspend, delete login; refused with an active booking/trip (`ACTIVE_BOOKING_EXISTS`, `ACTIVE_TRIP_EXISTS`) or a driver's unsettled balance (`SETTLEMENT_PENDING`) |
 | `get_driver_trip_history(limit?, before?)` | driver | own COMPLETED/CANCELLED trips, newest first, with passengers, seats, fares and fees from completed bookings |
+| `mark_booking_payment(booking, received)` | driver (own trip) / admin | record cash received (posts the fare to the ledger) or not paid (posts nothing); PENDING → PAID/UNPAID, UNPAID → PAID; PAID is final (`PAYMENT_ALREADY_RECEIVED`) |
+| `get_driver_payments_to_collect()` | driver | PENDING bookings plus the rest of the latest completed trip, with `pending_count` (Collect payment screen) |
 | `admin_set_user_role` | admin | promote to driver/admin |
 | `search_trips(origin, destination)` | signed-in | bookable trips with server-computed `available_seats` and driver location |
 | `get_my_active_booking()` | passenger | booking + trip + auto + driver reachability/location |

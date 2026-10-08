@@ -31,6 +31,7 @@ select public.final_call(:'trip1'::uuid);
 select public.mark_boarded(:'priya_booking'::uuid);
 select public.start_trip(:'trip1'::uuid);
 select public.complete_trip(:'trip1'::uuid);
+select public.mark_booking_payment(:'priya_booking'::uuid, true);  -- driver received the cash
 
 select is(public.get_driver_trip_history()->0->>'id', :'trip1', 'the completed trip is first');
 select is((public.get_driver_trip_history()->0->>'seat_count')::int, 2, 'seat count comes from completed bookings');

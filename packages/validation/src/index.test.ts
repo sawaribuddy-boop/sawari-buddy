@@ -60,9 +60,11 @@ describe('changePasswordInput', () => {
 });
 
 describe('passwordResetInput', () => {
-  it('requires a 6-digit code', () => {
+  it('accepts the 6- or 8-digit code from the email', () => {
     const base = { email: 'priya@sawaribuddy.local', newPassword: 'NewPass#2026' };
     expect(passwordResetInput.safeParse({ ...base, code: '12345' }).success).toBe(false);
     expect(passwordResetInput.safeParse({ ...base, code: ' 123456 ' }).success).toBe(true);
+    expect(passwordResetInput.safeParse({ ...base, code: '12345678' }).success).toBe(true);
+    expect(passwordResetInput.safeParse({ ...base, code: '12a456' }).success).toBe(false);
   });
 });

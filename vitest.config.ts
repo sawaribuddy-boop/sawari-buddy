@@ -29,6 +29,7 @@ export default defineConfig({
         test: {
           name: 'integration',
           include: ['apps/mobile/src/**/*.integration.test.ts'],
+          setupFiles: ['scripts/test/require-local-supabase.ts'],
           testTimeout: 30_000,
           fileParallelism: false,
         },

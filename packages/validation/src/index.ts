@@ -110,7 +110,8 @@ export const passwordResetInput = z.object({
   code: z
     .string()
     .trim()
-    .regex(/^\d{6}$/, { message: 'Enter the 6-digit code from the email' }),
+    // Length follows [auth.email].otp_length: 6 locally, 8 on the hosted project.
+    .regex(/^\d{6,10}$/, { message: 'Enter the code from the email' }),
   newPassword,
 });
 export type PasswordResetInput = z.infer<typeof passwordResetInput>;

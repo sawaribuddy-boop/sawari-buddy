@@ -59,6 +59,10 @@ select is((select array_agg(distinct status::text) from public.bookings where tr
 select is((select status::text from public.complete_trip(:'trip_id')), 'COMPLETED', 'complete_trip is idempotent');
 select is((select active_trip_id from public.driver_presence where driver_id = :'raj'), null, 'presence cleared after completion');
 
+-- Cash collected at drop-off: the driver marks both bookings as received, which posts the fares.
+select lives_ok(format('select public.mark_booking_payment(%L, true)', :'b_priya'), 'driver marks the app passenger paid');
+select lives_ok(format('select public.mark_booking_payment(%L, true)', :'w1'), 'driver marks the walk-in paid');
+
 -- Earnings (driver's own view): app 1 x 3000 (fee 300) + walk-in 2 x 3000 (fee 0)
 select is((public.driver_earnings_summary() ->> 'earnings_paise')::bigint, 8700::bigint, 'driver earnings = 2700 + 6000');
 select is((public.driver_earnings_summary() ->> 'fares_collected_paise')::bigint, 9000::bigint, 'cash fares collected = 9000');

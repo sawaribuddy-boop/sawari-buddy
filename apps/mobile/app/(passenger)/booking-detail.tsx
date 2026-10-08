@@ -1,5 +1,5 @@
-import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode } from '@sawari/constants';
-import { firstName as getFirstName, formatTimeAgo } from '@sawari/domain';
+import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode, PAYMENT_STATUS, type PaymentStatus } from '@sawari/constants';
+import { firstName as getFirstName, formatRupees, formatTimeAgo } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
@@ -146,6 +146,8 @@ export default function BookingDetailScreen() {
           <Banner tone="info" title="You are on board" message="Enjoy your ride!" />
         ) : null}
 
+        {status === BOOKING_STATUS.COMPLETED ? <PaymentBanner booking={booking} /> : null}
+
         {status === BOOKING_STATUS.COMPLETED && rating ? (
           <Card>
             <View style={styles.rating}>
@@ -189,6 +191,27 @@ export default function BookingDetailScreen() {
       />
     </Screen>
   );
+}
+
+function PaymentBanner({ booking }: { booking: Record<string, unknown> }) {
+  const paymentStatus = booking.payment_status as PaymentStatus | null | undefined;
+  const fare = formatRupees((booking.total_fare_paise as number) ?? 0);
+  switch (paymentStatus) {
+    case PAYMENT_STATUS.PAID:
+      return <Banner tone="success" title={`Paid ${fare} in cash`} />;
+    case PAYMENT_STATUS.UNPAID:
+      return (
+        <Banner
+          tone="warning"
+          title="Marked as not paid"
+          message="The driver recorded this ride as unpaid. If you did pay, contact support from Profile → Help & support."
+        />
+      );
+    case PAYMENT_STATUS.PENDING:
+      return <Banner tone="info" title={`Pay ${fare} in cash to the driver`} />;
+    default:
+      return null;
+  }
 }
 
 const styles = StyleSheet.create({

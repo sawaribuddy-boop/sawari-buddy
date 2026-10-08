@@ -13,6 +13,7 @@ export const queryKeys = {
   tripManifest: (tripId: string) => ['trip-manifest', tripId] as const,
   driverEarnings: (from?: string, to?: string) => ['driver-earnings', { from, to }] as const,
   driverTripHistory: ['driver-trip-history'] as const,
+  driverPaymentsToCollect: ['driver-payments-to-collect'] as const,
 
   // Shared
   platformSettings: ['platform-settings'] as const,

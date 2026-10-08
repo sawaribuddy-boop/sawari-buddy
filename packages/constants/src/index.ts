@@ -28,6 +28,10 @@ export type BookingStatus = (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS]
 /** Statuses that hold seats on a trip (mirrors private.booking_occupies_seat). */
 export const SEAT_OCCUPYING_STATUSES: readonly BookingStatus[] = ['CONFIRMED', 'BOARDED'];
 
+/** Cash collection at drop-off (set on COMPLETED bookings only). */
+export const PAYMENT_STATUS = { PENDING: 'PENDING', PAID: 'PAID', UNPAID: 'UNPAID' } as const;
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+
 export const BOOKING_SOURCE = { APP: 'APP', WALK_IN: 'WALK_IN' } as const;
 export type BookingSource = (typeof BOOKING_SOURCE)[keyof typeof BOOKING_SOURCE];
 
@@ -75,6 +79,8 @@ export const ERROR_MESSAGES = {
   RATING_INVALID: 'Please choose 1 to 5 stars and keep the comment under 500 characters.',
   ALREADY_RATED: 'You have already rated this ride.',
   ACTIVE_BOOKING_EXISTS: 'Finish or cancel your current booking first.',
+  PAYMENTS_PENDING: 'Mark payment for the passengers of your last trip before starting a new one.',
+  PAYMENT_ALREADY_RECEIVED: 'This payment is already recorded as received. Contact support to change it.',
   SETTLEMENT_PENDING: 'Settle your balance with SawariBuddy before deleting your account. Please contact support.',
 } as const;
 export type ErrorCode = keyof typeof ERROR_MESSAGES;

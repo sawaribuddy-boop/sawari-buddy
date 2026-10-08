@@ -95,6 +95,24 @@ A passenger who is waiting to board stays **`CONFIRMED`**, before and after the 
 - **`cancel_reason` values:** `PASSENGER_CANCELLED`, `TRIP_CANCELLED`, `DRIVER_UNREACHABLE`, `WALK_IN_REMOVED`, `ADMIN_CANCELLED`.
 - **Immutable after creation:** trip, source, passenger, seat count, fare/fee snapshot, idempotency key, creator and code.
 
+### Payment (cash, on `COMPLETED` bookings)
+
+```
+complete_trip ─► PENDING ──── driver: mark_booking_payment(received) ────► PAID   (fare posted to the ledger)
+                    │                                                        ▲
+                    └─ driver: mark_booking_payment(not received) ─► UNPAID ─┘ (paid later)
+```
+
+| From | To | Actor / function | Effect |
+|---|---|---|---|
+| — | `PENDING` | system, inside `complete_trip` | nothing posted yet |
+| `PENDING` / `UNPAID` | `PAID` | trip's driver (or admin) `mark_booking_payment(true)` | `ledger_post_booking_fare`: driver earning + platform fee owed |
+| `PENDING` | `UNPAID` | trip's driver (or admin) `mark_booking_payment(false)` | nothing posted, so no fee for unpaid rides |
+
+- `PAID` is final (`PAYMENT_ALREADY_RECEIVED`); support corrects mistakes with a ledger adjustment.
+- A driver cannot open a new trip while any of their bookings is `PENDING` (`PAYMENTS_PENDING`).
+- Enforced by `bookings_payment_guard`, and `bookings_payment_when_completed` (payment status is set exactly when the booking is `COMPLETED`).
+
 **Future prepaid flow:** add a `PENDING` enum value (`alter type … add value`) for "seat held while paying", with a hold expiry. It would count as occupying only until the hold expires. Nothing else in the machine changes.
 
 ---

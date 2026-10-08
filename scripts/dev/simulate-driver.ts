@@ -194,6 +194,15 @@ async function main() {
   await unwrap(supabase.rpc('complete_trip', { p_trip_id: tripId }));
   console.log('Trip completed.');
 
+  // 8b. Cash collected from everyone (the driver's Collect payment screen)
+  const toCollect = (await unwrap(supabase.rpc('get_driver_payments_to_collect'))) as {
+    bookings: { id: string; payment_status: string }[];
+  };
+  for (const b of toCollect.bookings.filter((x) => x.payment_status === 'PENDING')) {
+    await unwrap(supabase.rpc('mark_booking_payment', { p_booking_id: b.id, p_received: true }));
+  }
+  console.log('Cash marked as received.');
+
   // 9. Show earnings
   const earnings = (await unwrap(supabase.rpc('driver_earnings_summary'))) as Record<string, unknown>;
   console.log('\nToday\'s earnings:');
