@@ -79,7 +79,7 @@ A passenger who is waiting to board stays **`CONFIRMED`**, before and after the 
 
 | From | To | Actor / function | Guard |
 |---|---|---|---|
-| — | `CONFIRMED` (APP) | passenger `book_seats` | trip `OPEN`; driver reachable; seats available **under trip row lock**; passenger has no other active booking; `1 ≤ seat_count ≤ max_seats_per_booking`; idempotency key |
+| — | `CONFIRMED` (APP) | passenger `book_seats` | trip `OPEN`; driver reachable; seats available **under trip row lock**; passenger has no other active booking; `1 ≤ seat_count ≤ max_seats_per_booking`, or `seat_count = capacity` (whole auto, so the auto must be empty); idempotency key |
 | — | `BOARDED` (WALK_IN) | driver `add_walk_in` | trip `OPEN`/`BOARDING`¹; seats available under the same lock; idempotency key |
 | `CONFIRMED` | `BOARDED` | driver `mark_boarded` | trip `OPEN`/`BOARDING` (idempotent) |
 | `CONFIRMED` | `NO_SHOW` | driver `mark_no_show` | APP booking; trip `BOARDING` (`FINAL_CALL_REQUIRED`); `now() ≥ trip.no_show_eligible_at` (`GRACE_PERIOD_NOT_ELAPSED`) (idempotent) |

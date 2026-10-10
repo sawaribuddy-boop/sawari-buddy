@@ -1,6 +1,7 @@
-import { BOOKING_SOURCE, BOOKING_STATUS } from '@sawari/constants';
+import { BOOKING_SOURCE, BOOKING_STATUS, TRIP_STATUS } from '@sawari/constants';
+import { formatRupees } from '@sawari/domain';
 
-import type { BookingEvent } from './useTripChannel';
+import type { BookingEvent, TripEvent } from './useTripChannel';
 
 export interface Notice {
   title: string;
@@ -59,4 +60,26 @@ export function driverBookingNotice(event: BookingEvent, passengerName: string |
     default:
       return null;
   }
+}
+
+/** What the passenger's app already knows about the ride (cached active booking). */
+export interface RideContext {
+  destination?: string;
+  driverFirstName?: string;
+  totalFarePaise?: number;
+}
+
+/** Toast when the driver starts the passenger's trip. */
+export function passengerTripStartedNotice(event: TripEvent, ride: RideContext): string | null {
+  if (event.status !== TRIP_STATUS.IN_PROGRESS) return null;
+  return ride.destination ? `Your ride has started. Heading to ${ride.destination}.` : 'Your ride has started.';
+}
+
+/** Toast when the passenger's own booking completes (the driver ended the trip). */
+export function passengerRideEndedNotice(event: BookingEvent, myBookingId: string | undefined, ride: RideContext): string | null {
+  if (!myBookingId || event.booking_id !== myBookingId || event.status !== BOOKING_STATUS.COMPLETED) return null;
+  const arrived = ride.destination ? `You've reached ${ride.destination}.` : 'Your ride has ended.';
+  if (!ride.totalFarePaise) return arrived;
+  const to = ride.driverFirstName ? ` to ${ride.driverFirstName}` : '';
+  return `${arrived} Please pay ${formatRupees(ride.totalFarePaise)} in cash${to}.`;
 }

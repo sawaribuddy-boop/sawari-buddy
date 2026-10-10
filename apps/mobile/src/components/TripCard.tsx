@@ -22,12 +22,30 @@ export interface TripCardData {
 
 export interface TripCardProps {
   trip: TripCardData;
+  /** Seats requested; for a whole-auto search this is the auto's capacity. */
   seatCount: number;
+  /** Booking every seat: only an empty auto qualifies. */
+  wholeAuto?: boolean;
   onBook: () => void;
 }
 
-export function TripCard({ trip, seatCount, onBook }: TripCardProps) {
-  const canBook = trip.available_seats >= seatCount;
+/** Whether this auto can take the booking (the server re-checks under the trip lock). */
+export function tripFits(trip: TripCardData, seatCount: number, wholeAuto: boolean): boolean {
+  return wholeAuto ? trip.available_seats === trip.capacity : trip.available_seats >= seatCount;
+}
+
+export function TripCard({ trip, seatCount, wholeAuto = false, onBook }: TripCardProps) {
+  const canBook = tripFits(trip, seatCount, wholeAuto);
+  const totalPaise = trip.fare_paise * seatCount;
+  const bookLabel = canBook
+    ? wholeAuto
+      ? 'Book whole auto'
+      : seatCount === 1
+        ? 'Book Seat'
+        : `Book ${seatCount} Seats`
+    : wholeAuto
+      ? 'Already has passengers'
+      : 'Not enough seats';
   return (
     <Card>
       <View style={styles.header}>
@@ -52,11 +70,15 @@ export function TripCard({ trip, seatCount, onBook }: TripCardProps) {
       <SeatBar occupied={trip.capacity - trip.available_seats} capacity={trip.capacity} />
 
       <View style={styles.footer}>
-        <AppText variant="small" color={colors.ink500}>
-          {seatCount} {seatCount === 1 ? 'seat' : 'seats'} selected
-        </AppText>
+        <View style={styles.total}>
+          <AppText variant="small" color={colors.ink500}>
+            {wholeAuto ? `Whole auto · ${seatCount} seats` : `${seatCount} ${seatCount === 1 ? 'seat' : 'seats'}`} ×{' '}
+            {formatRupees(trip.fare_paise)}
+          </AppText>
+          <AppText variant="bodyStrong">{formatRupees(totalPaise)}</AppText>
+        </View>
         <Button
-          label={canBook ? 'Book Seat' : 'Not enough seats'}
+          label={bookLabel}
           variant="primary"
           size="md"
           fullWidth={false}
@@ -73,5 +95,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   headerText: { flex: 1, gap: spacing.xxs },
   fare: { alignItems: 'flex-end' },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.md },
+  total: { flex: 1, gap: spacing.xxs },
 });

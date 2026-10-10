@@ -32,6 +32,7 @@ import {
   useStartTrip,
   useTripManifest,
 } from '@/features/driver';
+import { newIdempotencyKey } from '@/lib/ids';
 import { colors, spacing } from '@/theme';
 
 type Booking = {
@@ -92,7 +93,7 @@ export default function TripScreen() {
   const hasBoarded = bookings.some((b) => b.status === BOOKING_STATUS.BOARDED);
   const canStart = !hasConfirmed && hasBoarded;
 
-  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const idempotencyKeyRef = useRef(newIdempotencyKey());
 
   const handleAddWalkIn = useCallback(() => {
     if (!tripId) return;
@@ -108,7 +109,7 @@ export default function TripScreen() {
           setWalkInSheetVisible(false);
           setWalkInSeats(1);
           setWalkInLabel('');
-          idempotencyKeyRef.current = crypto.randomUUID();
+          idempotencyKeyRef.current = newIdempotencyKey();
         },
       },
     );
@@ -256,7 +257,9 @@ export default function TripScreen() {
                   {b.source === 'WALK_IN' ? b.walk_in_label || 'Walk-in' : b.passenger_first_name || 'Passenger'}
                 </AppText>
                 <AppText variant="small" color={colors.ink500}>
-                  {b.seat_count} {b.seat_count === 1 ? 'seat' : 'seats'}
+                  {b.source === 'APP' && capacity > 0 && b.seat_count === capacity
+                    ? `Whole auto · ${b.seat_count} seats`
+                    : `${b.seat_count} ${b.seat_count === 1 ? 'seat' : 'seats'}`}
                   {b.seat_preference && b.seat_preference !== 'ANY' ? ` · ${b.seat_preference}` : ''}
                 </AppText>
               </View>
@@ -342,7 +345,7 @@ export default function TripScreen() {
                 setWalkInSheetVisible(true);
                 setWalkInSeats(1);
                 setWalkInLabel('');
-                idempotencyKeyRef.current = crypto.randomUUID();
+                idempotencyKeyRef.current = newIdempotencyKey();
               }}
             />
           ) : null}

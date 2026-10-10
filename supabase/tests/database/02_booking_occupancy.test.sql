@@ -42,8 +42,9 @@ select throws_ok(format('select public.book_seats(%L, 1::smallint, %L)', :'trip_
 
 -- Neha: seat limit, then 1 seat
 select set_config('request.jwt.claims', json_build_object('sub', :'neha', 'role', 'authenticated')::text, true);
-select throws_ok(format('select public.book_seats(%L, 4::smallint, %L)', :'trip_id', 'bbbbbbbb-0000-4000-8000-000000000001'),
-                 'P0001', 'SEAT_COUNT_INVALID', 'seat count above max_seats_per_booking is rejected');
+-- 6 is above max_seats_per_booking (4) and is not the whole auto (5 seats).
+select throws_ok(format('select public.book_seats(%L, 6::smallint, %L)', :'trip_id', 'bbbbbbbb-0000-4000-8000-000000000001'),
+                 'P0001', 'SEAT_COUNT_INVALID', 'seat count above max_seats_per_booking (and not the whole auto) is rejected');
 select id as b_neha from public.book_seats(:'trip_id', 1::smallint, 'bbbbbbbb-0000-4000-8000-000000000002') \gset
 
 -- Driver adds a walk-in: occupancy = 2 (Priya) + 1 (Neha) + 1 (walk-in) = 4 of 5

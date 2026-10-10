@@ -90,6 +90,7 @@ export default function BookingDetailScreen() {
         ? getFirstName(driver.full_name as string)
         : '',
     seatCount: (booking.seat_count as number) ?? 1,
+    wholeAuto: typeof trip?.capacity === 'number' && booking.seat_count === trip.capacity,
     farePerSeatPaise: (booking.fare_per_seat_paise as number) ?? 0,
     totalFarePaise: (booking.total_fare_paise as number) ?? 0,
     seatPreference: (booking.seat_preference as string) ?? 'ANY',

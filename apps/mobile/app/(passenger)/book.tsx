@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, Stepper, StopPicker } from '@/components';
+import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, type SeatChoice, SeatCountPicker, StopPicker } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useMyActiveBooking } from '@/features/booking';
 import { usePlatformSettings, useRoutes, useStops } from '@/features/trip';
@@ -20,9 +20,10 @@ export default function BookScreen() {
 
   const [originId, setOriginId] = useState<string | null>(null);
   const [destinationId, setDestinationId] = useState<string | null>(null);
-  const [seatCount, setSeatCount] = useState(1);
+  const [seatChoice, setSeatChoice] = useState<SeatChoice>(1);
 
-  const maxSeats = (settings as Record<string, unknown> | null)?.max_seats_per_booking as number | undefined ?? 4;
+  // Offer 1 to 4 seats (capped by the server's max_seats_per_booking), then "Whole auto".
+  const maxSeats = Math.min(4, ((settings as Record<string, unknown> | null)?.max_seats_per_booking as number | undefined) ?? 4);
   const stopsList = Array.isArray(stops) ? (stops as { id: string; name: string }[]) : [];
 
   const handleSwap = useCallback(() => {
@@ -36,7 +37,7 @@ export default function BookScreen() {
     if (!originId || !destinationId) return;
     router.push({
       pathname: '/(passenger)/search-results',
-      params: { originId, destinationId, seatCount: String(seatCount) },
+      params: { originId, destinationId, seatCount: String(seatChoice) },
     });
   };
 
@@ -100,9 +101,14 @@ export default function BookScreen() {
         </View>
 
         <Card>
-          <View style={styles.seatRow}>
-            <AppText variant="bodyStrong">Passengers</AppText>
-            <Stepper value={seatCount} min={1} max={maxSeats} onChange={setSeatCount} label="Passengers" />
+          <View style={styles.seatPicker}>
+            <AppText variant="bodyStrong">How many seats?</AppText>
+            <SeatCountPicker value={seatChoice} maxSeats={maxSeats} onChange={setSeatChoice} />
+            {seatChoice === 'whole' ? (
+              <AppText variant="small" color={colors.ink500}>
+                Book every seat in an empty auto. Fare is the number of seats × the per-seat fare.
+              </AppText>
+            ) : null}
           </View>
         </Card>
 
@@ -159,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
   },
-  seatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  seatPicker: { gap: spacing.sm },
   popularSection: { gap: spacing.sm, marginTop: spacing.md },
   routeRow: {
     flexDirection: 'row',

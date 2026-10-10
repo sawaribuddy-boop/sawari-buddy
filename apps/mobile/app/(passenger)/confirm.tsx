@@ -1,12 +1,13 @@
 import { SEAT_PREFERENCE, type SeatPreference, errorMessageFor, isErrorCode } from '@sawari/constants';
 import { formatRupees } from '@sawari/domain';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, BookingCard, Button, Card, Icon, Screen, SeatPreferenceRadio } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useBookSeats } from '@/features/booking';
+import { newIdempotencyKey } from '@/lib/ids';
 import { colors, spacing } from '@/theme';
 
 export default function ConfirmScreen() {
@@ -20,6 +21,8 @@ export default function ConfirmScreen() {
     destinationId: string;
     originName: string;
     destName: string;
+    /** '1' when booking every seat in the auto. */
+    wholeAuto?: string;
   }>();
   const router = useRouter();
   const { account } = useAuth();
@@ -30,7 +33,27 @@ export default function ConfirmScreen() {
   const totalFare = farePaise * seatCount;
 
   const [preference, setPreference] = useState<SeatPreference>(SEAT_PREFERENCE.ANY);
-  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const idempotencyKeyRef = useRef(newIdempotencyKey());
+
+  // Screens inside the passenger tabs stay mounted after navigating away, so a second visit (e.g.
+  // after cancelling by mistake) would find the button disabled and reuse the old key, which the
+  // server answers with the earlier, cancelled booking. Start fresh for every booking attempt; a
+  // retry within one attempt keeps the same key so it can never double-book.
+  const { reset } = bookMutation;
+  const startFresh = useCallback(() => {
+    idempotencyKeyRef.current = newIdempotencyKey();
+    reset();
+  }, [reset]);
+  useEffect(startFresh, [params.tripId, params.seatCount, startFresh]);
+  // Read through a ref so this runs only when the screen comes back into view, not the moment a
+  // booking succeeds (which would re-enable the button before navigating away).
+  const succeededRef = useRef(false);
+  succeededRef.current = bookMutation.isSuccess;
+  useFocusEffect(
+    useCallback(() => {
+      if (succeededRef.current) startFresh();
+    }, [startFresh]),
+  );
 
   const handleConfirm = () => {
     bookMutation.mutate(
@@ -127,7 +150,7 @@ export default function ConfirmScreen() {
           <View style={styles.details}>
             <DetailLine label="Auto" value={params.autoRegistration ?? ''} />
             <DetailLine label="Driver" value={params.driverFirstName ?? ''} />
-            <DetailLine label="Seats" value={String(seatCount)} />
+            <DetailLine label="Seats" value={params.wholeAuto === '1' ? `Whole auto (${seatCount} seats)` : String(seatCount)} />
             <DetailLine label="Fare" value={`${formatRupees(farePaise)}/seat × ${seatCount} = ${formatRupees(totalFare)}`} />
             <DetailLine label="Payment" value="Cash" />
           </View>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { driverBookingNotice, passengerBookingNotice } from './notices';
+import { driverBookingNotice, passengerBookingNotice, passengerRideEndedNotice, passengerTripStartedNotice } from './notices';
 import type { BookingEvent } from './useTripChannel';
 
 const event = (overrides: Partial<BookingEvent> = {}): BookingEvent => ({
@@ -68,5 +68,27 @@ describe('driverBookingNotice', () => {
     expect(driverBookingNotice(event({ source: 'WALK_IN', cancel_reason: 'WALK_IN_REMOVED' }), undefined)).toBeNull();
     expect(driverBookingNotice(event({ status: 'NO_SHOW', cancel_reason: null }), 'Priya')).toBeNull();
     expect(driverBookingNotice(event({ status: 'CONFIRMED', cancel_reason: null }), 'Priya')).toBeNull();
+  });
+});
+
+describe('passenger trip notices', () => {
+  const ride = { destination: 'Dream City', driverFirstName: 'Raj', totalFarePaise: 6000 };
+
+  it('announces the trip starting, and nothing else', () => {
+    expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'IN_PROGRESS' }, ride)).toBe(
+      'Your ride has started. Heading to Dream City.',
+    );
+    expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'BOARDING' }, ride)).toBeNull();
+    expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'IN_PROGRESS' }, {})).toBe('Your ride has started.');
+  });
+
+  it('announces arrival with the cash to pay, for the passenger’s own booking only', () => {
+    const done = event({ status: 'COMPLETED', cancel_reason: null });
+    expect(passengerRideEndedNotice(done, 'booking-1', ride)).toBe(
+      "You've reached Dream City. Please pay ₹60 in cash to Raj.",
+    );
+    expect(passengerRideEndedNotice(done, 'booking-2', ride)).toBeNull();
+    expect(passengerRideEndedNotice(event({ status: 'BOARDED' }), 'booking-1', ride)).toBeNull();
+    expect(passengerRideEndedNotice(done, 'booking-1', {})).toBe('Your ride has ended.');
   });
 });
