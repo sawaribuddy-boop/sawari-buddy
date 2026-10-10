@@ -18,6 +18,8 @@ export interface BookingCardData {
   autoRegistration: string;
   driverFirstName: string;
   seatCount: number;
+  /** Every seat in the auto is booked by this passenger. */
+  wholeAuto?: boolean;
   farePerSeatPaise: number;
   totalFarePaise: number;
   seatPreference: string;
@@ -62,7 +64,7 @@ export function BookingCard({ booking }: BookingCardProps) {
 
       <View style={styles.details}>
         <DetailRow icon="rickshaw" label={`${booking.autoRegistration} · ${booking.driverFirstName}`} />
-        <DetailRow icon="seat" label={`${booking.seatCount} ${booking.seatCount === 1 ? 'seat' : 'seats'} · ${booking.seatPreference}`} />
+        <DetailRow icon="seat" label={`${booking.wholeAuto ? `Whole auto · ${booking.seatCount} seats` : `${booking.seatCount} ${booking.seatCount === 1 ? 'seat' : 'seats'}`} · ${booking.seatPreference}`} />
         <DetailRow
           icon="cash"
           label={`${formatRupees(booking.farePerSeatPaise)}/seat × ${booking.seatCount} = ${formatRupees(booking.totalFarePaise)}`}

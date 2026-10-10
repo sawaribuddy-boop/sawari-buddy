@@ -17,6 +17,7 @@
 | `20260927000700_go_online.sql`, `20260927000800_booking_broadcast.sql` | From the phase-3 i18n branch; already applied to the hosted project, added to the repo so histories match. `go_online()` kept for builds from that branch |
 | `20261008000100_remove_duplicate_booking_broadcast.sql` | Restores `book_seats` without the manual broadcast (the bookings trigger already sends `booking_changed`) |
 | `20261008000200_cash_payment_collection.sql` | `bookings.payment_status` (PENDING/PAID/UNPAID); `complete_trip` no longer posts fares; `mark_booking_payment`, `get_driver_payments_to_collect`; new trips blocked while payments are PENDING |
+| `20261010000100_whole_auto_booking.sql` | `book_seats` allows up to `max_seats_per_booking` (raised to 4) **or** the whole auto (`seat_count` = trip capacity, only while the auto is empty) |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -157,7 +158,7 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 
 | Function | Caller | Purpose |
 |---|---|---|
-| `book_seats` | passenger | concurrency-safe, idempotent booking |
+| `book_seats` | passenger | concurrency-safe, idempotent booking: 1 to `max_seats_per_booking` seats, or the whole auto (all seats of an empty auto) |
 | `cancel_booking` | passenger | `CONFIRMED` → `CANCELLED` (free in V1), idempotent |
 | `open_trip` | driver | Go Online: open a trip for an assigned auto + route |
 | `final_call` | driver | `OPEN` → `BOARDING`; sets `final_call_at`, `no_show_eligible_at` |
