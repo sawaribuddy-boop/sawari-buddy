@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
-import type { ColorValue } from 'react-native';
+import { useCallback, useState } from 'react';
+import { type ColorValue, View } from 'react-native';
 
-import { Icon, type IconName } from '@/components';
+import { Icon, type IconName, Toast, type ToastMessage } from '@/components';
 import { PendingRatingPrompt } from '@/features/booking';
 import { usePassengerTripChannel } from '@/features/realtime';
 import { colors } from '@/theme';
@@ -11,10 +12,14 @@ function tabIcon(name: IconName) {
 }
 
 export default function PassengerLayout() {
-  usePassengerTripChannel();
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const showNotice = useCallback((text: string) => {
+    setToast({ id: `${Date.now()}`, text, icon: 'rickshaw' });
+  }, []);
+  usePassengerTripChannel(showNotice);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Tabs
         // Back returns to the previous screen (e.g. Profile → Edit profile → Profile), not to the first tab.
         backBehavior="history"
@@ -39,6 +44,7 @@ export default function PassengerLayout() {
         <Tabs.Screen name="report-problem" options={{ href: null }} />
       </Tabs>
       <PendingRatingPrompt />
-    </>
+      <Toast message={toast} duration={6000} onDismiss={() => setToast(null)} />
+    </View>
   );
 }
