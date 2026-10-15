@@ -102,3 +102,9 @@ export function formatTripTime(isoString: string | Date, now: Date = new Date())
   if (day(at) === day(now)) return formatClockTime(at);
   return at.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: IST });
 }
+
+/** "+919876543210" → "+91 98765 43210"; other numbers are shown as stored. */
+export function formatPhone(phone: string): string {
+  const m = /^\+91(\d{5})(\d{5})$/.exec(phone);
+  return m ? `+91 ${m[1]} ${m[2]}` : phone;
+}

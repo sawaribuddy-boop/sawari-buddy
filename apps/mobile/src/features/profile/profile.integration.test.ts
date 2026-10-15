@@ -1,5 +1,5 @@
 /// <reference types="node" />
-// Profile section against local Supabase over the Mac's LAN address: edit profile, change password,
+// Profile section against local Supabase over the Mac's LAN address: edit profile, verify a mobile number, change password,
 // reset password with the emailed 6-digit code (read from Mailpit), report a problem.
 // Requires `pnpm db:start` + `pnpm mobile:env`. The reset email counts against [auth.rate_limit].email_sent.
 import { randomUUID } from 'node:crypto';
@@ -15,10 +15,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { connect } from '../../../../../supabase/tests/concurrency/db';
 
 import { loadAccount } from '@/features/auth/account';
+import { authErrorMessage } from '@/features/auth/authErrors';
 import { raiseIssue, updateMyProfile } from '@/lib/api';
 import { validateEnv } from '@/lib/env';
 
-import { updateProfileErrorMessage } from './profileErrors';
 
 const MAILPIT = 'http://127.0.0.1:55324';
 
@@ -79,18 +79,27 @@ describe('profile section against local Supabase (LAN)', () => {
     await admin.end();
   });
 
-  it('edits name and phone, and reports a phone that another account already uses', async () => {
+  it('edits the name; the number is set only by verifying an SMS code, one account per number', async () => {
     const a = await signUpPassenger('Asha Rao');
     const b = await signUpPassenger('Bilal Khan');
-    const phone = `+9198${String(Date.now()).slice(-8)}`;
 
-    const input = editProfileInput.parse({ fullName: '  Asha R. ', phone: `${phone.slice(3, 8)} ${phone.slice(8)}` });
-    await updateMyProfile(a.client, a.userId, input);
-    const account = await loadAccount(a.client, a.userId);
-    expect(account.kind === 'ok' && account.account).toMatchObject({ fullName: 'Asha R.', phone });
+    await updateMyProfile(a.client, a.userId, editProfileInput.parse({ fullName: '  Asha R. ' }));
+    const named = await loadAccount(a.client, a.userId);
+    expect(named.kind === 'ok' && named.account).toMatchObject({ fullName: 'Asha R.', phone: null, phoneVerified: false });
 
-    const clash = await updateMyProfile(b.client, b.userId, { fullName: 'Bilal Khan', phone }).catch((e: unknown) => e);
-    expect(updateProfileErrorMessage(clash as { code?: string })).toBe('This mobile number is already used by another account.');
+    const direct = await a.client.from('profiles').update({ phone: '+919876500020' }).eq('id', a.userId);
+    expect(direct.error?.code).toBe('42501'); // the phone column is not writable
+
+    // Test number from supabase/config.toml [auth.sms.test_otp]: code 123456, no SMS sent.
+    const phone = '+919876500020';
+    expect((await a.client.auth.updateUser({ phone })).error).toBeNull();
+    expect((await a.client.auth.verifyOtp({ phone, token: '000000', type: 'phone_change' })).error?.code).toBe('otp_expired');
+    expect((await a.client.auth.verifyOtp({ phone, token: '123456', type: 'phone_change' })).error).toBeNull();
+    const verified = await loadAccount(a.client, a.userId);
+    expect(verified.kind === 'ok' && verified.account).toMatchObject({ phone, phoneVerified: true });
+
+    const clash = await b.client.auth.updateUser({ phone });
+    expect(authErrorMessage(clash.error)).toBe('This mobile number is already registered to another account.');
   });
 
   it('changes the password after re-checking the current one', async () => {

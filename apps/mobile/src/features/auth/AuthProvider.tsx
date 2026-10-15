@@ -2,6 +2,7 @@ import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { deviceIdHash } from '@/lib/device';
 import { secureSessionStorage } from '@/lib/secureStorage';
 import { SESSION_STORAGE_KEY, supabase } from '@/lib/supabase';
 
@@ -17,7 +18,17 @@ export interface AuthContextValue {
   /** Network/server problem while restoring the session (user stays signed in; can retry). */
   errorMessage: string | null;
   signIn(email: string, password: string): Promise<{ error: string | null }>;
-  signUp(fullName: string, email: string, password: string): Promise<{ error: string | null; needsConfirmation: boolean }>;
+  /** One account per mobile number and per device: refused up front when either already has one. */
+  signUp(
+    fullName: string,
+    email: string,
+    phone: string,
+    password: string,
+  ): Promise<{ error: string | null; needsConfirmation: boolean }>;
+  /** Texts a 6-digit code to verify `phone` (+91…) for the signed-in user. */
+  sendPhoneCode(phone: string): Promise<{ error: string | null }>;
+  /** Checks the code; on success the number is on the account and the app opens. */
+  verifyPhoneCode(phone: string, code: string): Promise<{ error: string | null }>;
   signOut(): Promise<void>;
   retry(): Promise<void>;
   clearNotice(): void;
@@ -140,14 +151,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? authErrorMessage(error) : null };
   }, []);
 
-  const signUp = useCallback<AuthContextValue['signUp']>(async (fullName, email, password) => {
+  const signUp = useCallback<AuthContextValue['signUp']>(async (fullName, email, phone, password) => {
     if (!supabase) return { error: 'The app is not configured. See the connection check.', needsConfirmation: false };
     setNotice(null);
+    const deviceId = await deviceIdHash();
+    // Say which rule refuses the sign-up; the database trigger enforces the same rules regardless.
+    const check = await supabase.rpc('check_sign_up', { p_phone: phone, p_device_id: deviceId ?? undefined });
+    const taken = (check.data ?? {}) as { phone_registered?: boolean; device_registered?: boolean };
+    if (taken.device_registered) {
+      return { error: 'An account has already been created on this phone. Log in to it instead.', needsConfirmation: false };
+    }
+    if (taken.phone_registered) {
+      return { error: 'This mobile number already has an account. Log in instead.', needsConfirmation: false };
+    }
     // The database trigger creates a PASSENGER profile from full_name; roles are never chosen by users.
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+    // `phone` is verified by SMS after sign-up; `device_id` limits sign-ups to one per device.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, phone, ...(deviceId ? { device_id: deviceId } : {}) } },
+    });
     if (error) return { error: authErrorMessage(error), needsConfirmation: false };
     return { error: null, needsConfirmation: data.session === null };
   }, []);
+
+  const sendPhoneCode = useCallback<AuthContextValue['sendPhoneCode']>(async (phone) => {
+    if (!supabase) return { error: 'The app is not configured. See the connection check.' };
+    const { error } = await supabase.auth.updateUser({ phone });
+    return { error: error ? authErrorMessage(error) : null };
+  }, []);
+
+  const verifyPhoneCode = useCallback<AuthContextValue['verifyPhoneCode']>(
+    async (phone, code) => {
+      if (!supabase) return { error: 'The app is not configured. See the connection check.' };
+      const { data, error } = await supabase.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
+      if (error) return { error: authErrorMessage(error) };
+      // Reload the account (verified number, and the app opens if it was waiting for this).
+      if (data.session) await resolve(data.session, true);
+      else if (sessionRef.current) await resolve(sessionRef.current, true);
+      return { error: null };
+    },
+    [resolve],
+  );
 
   const signOut = useCallback(async () => {
     await endLocalSession();
@@ -213,6 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       errorMessage,
       signIn,
       signUp,
+      sendPhoneCode,
+      verifyPhoneCode,
       signOut,
       retry,
       clearNotice,
@@ -228,6 +275,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       errorMessage,
       signIn,
       signUp,
+      sendPhoneCode,
+      verifyPhoneCode,
       signOut,
       retry,
       clearNotice,

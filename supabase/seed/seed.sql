@@ -30,6 +30,20 @@ select gen_random_uuid(), id, id::text, 'email',
        jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), now(), now(), now()
   from ins;
 
+-- Verified mobile numbers (test numbers from supabase/config.toml [auth.sms.test_otp]; code 123456).
+-- The on_auth_user_phone_verified trigger copies them to profiles.phone.
+update auth.users u
+   set phone = v.phone, phone_confirmed_at = now()
+  from (values
+    ('00000000-0000-4000-a000-000000000011'::uuid, '919876500001'),
+    ('00000000-0000-4000-a000-000000000012'::uuid, '919876500002'),
+    ('00000000-0000-4000-a000-000000000013'::uuid, '919876500003'),
+    ('00000000-0000-4000-a000-000000000021'::uuid, '919876500004'),
+    ('00000000-0000-4000-a000-000000000022'::uuid, '919876500005'),
+    ('00000000-0000-4000-a000-000000000023'::uuid, '919876500006')
+  ) as v (id, phone)
+ where u.id = v.id;
+
 -- Roles
 update public.profiles set role = 'ADMIN'  where id = '00000000-0000-4000-a000-000000000001';
 update public.profiles set role = 'DRIVER' where id in ('00000000-0000-4000-a000-000000000011',

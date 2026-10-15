@@ -42,6 +42,7 @@ export default function PassengerLayout() {
           <Tabs.Screen name="booking-detail" options={{ href: null }} />
           <Tabs.Screen name="edit-profile" options={{ href: null }} />
           <Tabs.Screen name="change-password" options={{ href: null }} />
+          <Tabs.Screen name="change-phone" options={{ href: null }} />
           <Tabs.Screen name="report-problem" options={{ href: null }} />
         </Tabs>
         <PendingRatingPrompt />

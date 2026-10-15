@@ -45,7 +45,7 @@ export const raiseIssueInput = z.object({
 export type RaiseIssueInput = z.infer<typeof raiseIssueInput>;
 
 // ---------------------------------------------------------------------------
-// Auth forms (email + password for development; phone OTP is a pre-launch task)
+// Auth forms (email + password, plus a mobile number verified by SMS code)
 // ---------------------------------------------------------------------------
 
 /** Mirrors supabase/config.toml [auth] minimum_password_length. */
@@ -86,10 +86,22 @@ export const phoneNumber = z
   })
   .refine((v) => v === null || /^\+[1-9]\d{7,14}$/.test(v), { message: 'Enter a valid mobile number' });
 
-export const signUpInput = z.object({ fullName, email, password: newPassword });
+/** A mobile number that must be given (sign-up, verification). */
+export const mobileNumber = phoneNumber
+  .refine((v) => v !== null, { message: 'Enter your mobile number' })
+  .transform((v) => v as string);
+
+/** The SMS verification code. */
+export const otpCode = z
+  .string()
+  .transform((raw) => raw.replace(/\s/g, ''))
+  .refine((v) => /^\d{6}$/.test(v), { message: 'Enter the 6-digit code' });
+
+export const signUpInput = z.object({ fullName, email, phone: mobileNumber, password: newPassword });
 export type SignUpInput = z.infer<typeof signUpInput>;
 
-export const editProfileInput = z.object({ fullName, phone: phoneNumber });
+/** The mobile number is changed by verifying a new one, not here. */
+export const editProfileInput = z.object({ fullName });
 export type EditProfileInput = z.infer<typeof editProfileInput>;
 
 export const changePasswordInput = z

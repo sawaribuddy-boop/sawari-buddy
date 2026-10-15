@@ -1,8 +1,10 @@
+import { errorMessageFor } from '@sawari/constants';
+import { formatPhone } from '@sawari/domain';
 import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Card, Icon, type IconName, ListRow, SettingsSection, StatusPill, type PillTone } from '@/components';
+import { AppText, Banner, Button, Card, Icon, type IconName, ListRow, SettingsSection, StatusPill, type PillTone } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useDriverHome, useDriverRating } from '@/features/driver';
 import {
@@ -17,6 +19,8 @@ import {
   whatsappSupport,
 } from '@/lib/appInfo';
 import { colors, radius, spacing } from '@/theme';
+
+import { useRaiseIssue } from './useRaiseIssue';
 
 const ROLE_LABEL = { PASSENGER: 'Passenger', DRIVER: 'Driver' } as const;
 
@@ -43,17 +47,12 @@ export interface ProfileViewProps {
   };
 }
 
-/** "+919876543210" → "+91 98765 43210"; other numbers are shown as stored. */
-export function formatPhone(phone: string): string {
-  const m = /^\+91(\d{5})(\d{5})$/.exec(phone);
-  return m ? `+91 ${m[1]} ${m[2]}` : phone;
-}
-
 /** Profile for passengers and drivers: account, rides, driver details, help, about, sign out. */
 export function ProfileView({ links }: ProfileViewProps) {
   const router = useRouter();
   const { account, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const deletionRequest = useRaiseIssue();
   if (!account) return null;
 
   function confirmSignOut() {
@@ -68,6 +67,30 @@ export function ProfileView({ links }: ProfileViewProps) {
         },
       },
     ]);
+  }
+
+  // App-store rules: users can start account deletion in the app. Support confirms and deletes it.
+  function confirmDeletionRequest() {
+    Alert.alert(
+      'Request account deletion?',
+      'SawariBuddy support will contact you to confirm, then delete your account and personal details. ' +
+        'Past rides stay in our records without your details.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send request',
+          style: 'destructive',
+          onPress: () =>
+            deletionRequest.mutate(
+              { kind: 'ACCOUNT_DELETION', description: 'Account deletion requested from the app.' },
+              {
+                onSuccess: () =>
+                  Alert.alert('Request sent', 'Support will contact you to confirm before your account is deleted.'),
+              },
+            ),
+        },
+      ],
+    );
   }
 
   return (
@@ -103,7 +126,16 @@ export function ProfileView({ links }: ProfileViewProps) {
       <SettingsSection title="Account">
         <ListRow title="Edit profile" subtitle="Name and mobile number" icon="account-edit-outline" onPress={() => router.push(links.editProfile)} />
         <ListRow title="Change password" icon="lock-reset" onPress={() => router.push(links.changePassword)} />
+        <ListRow
+          title="Request account deletion"
+          subtitle={deletionRequest.isSuccess ? 'Request sent. Support will contact you.' : 'Support confirms, then deletes it'}
+          icon="account-remove-outline"
+          onPress={deletionRequest.isPending || deletionRequest.isSuccess ? undefined : confirmDeletionRequest}
+        />
       </SettingsSection>
+      {deletionRequest.isError ? (
+        <Banner tone="danger" title="Could not send the request" message={errorMessageFor(deletionRequest.error)} />
+      ) : null}
 
       <SettingsSection title="Help & support">
         <ListRow

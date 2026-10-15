@@ -68,7 +68,18 @@ describe('mobile auth against local Supabase (LAN)', () => {
     expect(map.has(`${STORAGE_KEY}.n`)).toBe(true);
     expect(await loadAccount(client, newUserId)).toEqual({
       kind: 'ok',
-      account: { userId: newUserId, role: 'PASSENGER', fullName: 'Test Passenger', email, phone: null, licenseNumber: null, driverStatus: null },
+      account: {
+        userId: newUserId,
+        role: 'PASSENGER',
+        fullName: 'Test Passenger',
+        email,
+        phone: null,
+        phoneVerified: false,
+        phoneRequired: false,
+        signupPhone: null,
+        licenseNumber: null,
+        driverStatus: null,
+      },
     });
   });
 
@@ -130,6 +141,42 @@ describe('mobile auth against local Supabase (LAN)', () => {
       kind: 'ok',
       account: { role: 'DRIVER', fullName: 'Raj Kumar', driverStatus: 'ACTIVE' },
     });
+  });
+
+  it('allows one sign-up per device and refuses a verified number at sign-up', async () => {
+    const deviceId = randomUUID().replace(/-/g, '').repeat(2); // 64 hex characters, like the app's SHA-256
+    const first = `device-a-${randomUUID().slice(0, 8)}@test.local`;
+    const second = `device-b-${randomUUID().slice(0, 8)}@test.local`;
+    const ids: string[] = [];
+    try {
+      const anon = device(env).client;
+      expect((await anon.rpc('check_sign_up', { p_device_id: deviceId })).data).toMatchObject({ device_registered: false });
+
+      const a = await device(env).client.auth.signUp({
+        email: first,
+        password,
+        options: { data: { full_name: 'Device A', phone: '+919876500021', device_id: deviceId } },
+      });
+      expect(a.error).toBeNull();
+      ids.push(a.data.user!.id);
+      expect((await anon.rpc('check_sign_up', { p_device_id: deviceId })).data).toMatchObject({ device_registered: true });
+
+      const b = await device(env).client.auth.signUp({
+        email: second,
+        password,
+        options: { data: { full_name: 'Device B', device_id: deviceId } },
+      });
+      expect(b.error).not.toBeNull(); // the sign-up trigger refuses it; no account is created
+      expect((await admin.query('select 1 from auth.users where email = $1', [second])).rowCount).toBe(0);
+
+      // Priya's verified seed number (+919876500004).
+      expect((await anon.rpc('check_sign_up', { p_phone: '+919876500004' })).data).toMatchObject({ phone_registered: true });
+    } finally {
+      if (ids.length) {
+        await admin.query('delete from private.signup_devices where user_id = any($1::uuid[])', [ids]);
+        await admin.query('delete from auth.users where id = any($1::uuid[])', [ids]);
+      }
+    }
   });
 
   it('keeps admins out of the mobile app', async () => {

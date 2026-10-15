@@ -12,7 +12,7 @@ export default function PassengerEditProfileScreen() {
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
         <AppText variant="title">Edit profile</AppText>
-        <EditProfileForm onDone={() => router.back()} />
+        <EditProfileForm onDone={() => router.back()} changePhoneHref="/(passenger)/change-phone" />
       </View>
     </Screen>
   );

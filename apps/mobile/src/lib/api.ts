@@ -154,16 +154,12 @@ export async function rateBooking(
 // Account and support (passenger and driver)
 // ---------------------------------------------------------------------------
 
-/** Name and phone are the only profile columns users may change (column grant + RLS on profiles). */
-export async function updateMyProfile(
-  client: AppSupabaseClient,
-  userId: string,
-  changes: { fullName: string; phone: string | null },
-) {
-  const { error } = await client
-    .from('profiles')
-    .update({ full_name: changes.fullName, phone: changes.phone })
-    .eq('id', userId);
+/**
+ * The name is the only profile column users may change (column grant + RLS on profiles). The phone is
+ * set from the verified number (Supabase Auth updateUser + verifyOtp; see 20261016000400).
+ */
+export async function updateMyProfile(client: AppSupabaseClient, userId: string, changes: { fullName: string }) {
+  const { error } = await client.from('profiles').update({ full_name: changes.fullName }).eq('id', userId);
   if (error) throw error;
 }
 
