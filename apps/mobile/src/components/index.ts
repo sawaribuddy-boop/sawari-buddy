@@ -26,5 +26,6 @@ export { Stepper } from './Stepper';
 export { StopPicker, type Stop, type StopPickerProps } from './StopPicker';
 export { TextField } from './TextField';
 export { Toast, type ToastMessage } from './Toast';
+export { type TripTime, TripTimes } from './TripTimes';
 export { TripCard, type TripCardData, type TripCardProps, tripFits } from './TripCard';
 export { WalkInSheet, type WalkInSheetProps } from './WalkInSheet';

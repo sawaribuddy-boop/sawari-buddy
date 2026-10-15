@@ -16,6 +16,7 @@ import {
   RateRideSheet,
   Screen,
   StarRating,
+  TripTimes,
 } from '@/components';
 import { useCancelBooking, useMyActiveBooking, useMyBooking, useRateBooking } from '@/features/booking';
 import { bookingConfirmedNotice, usePassengerNotice } from '@/features/realtime';
@@ -148,6 +149,17 @@ export default function BookingDetailScreen() {
         ) : null}
 
         <BookingCard booking={cardData} />
+
+        <TripTimes
+          times={[
+            { label: 'Booked', at: booking.created_at as string | null },
+            { label: 'Boarded', at: booking.boarded_at as string | null },
+            { label: 'Ride started', at: trip?.started_at as string | null },
+            { label: 'Dropped off', at: booking.completed_at as string | null },
+            { label: 'Cancelled', at: booking.cancelled_at as string | null },
+            { label: 'Marked no-show', at: booking.no_show_at as string | null },
+          ]}
+        />
 
         {status === BOOKING_STATUS.CONFIRMED && !cancelMutation.isSuccess ? (
           <Button

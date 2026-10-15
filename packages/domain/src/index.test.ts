@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { driverAvailability, formatApproxDistance, formatRupees, formatTimeAgo, haversineMeters, secondsUntil, splitFare } from './index';
+import {
+  driverAvailability,
+  formatApproxDistance,
+  formatClockTime,
+  formatRupees,
+  formatTimeAgo,
+  formatTripTime,
+  haversineMeters,
+  secondsUntil,
+  splitFare,
+} from './index';
 
 describe('haversineMeters', () => {
   it('is zero for the same point', () => {
@@ -107,5 +117,22 @@ describe('greeting / firstName', () => {
     const { firstName } = await import('./index');
     expect(firstName('  Priya Sharma ')).toBe('Priya');
     expect(firstName('Raj')).toBe('Raj');
+  });
+});
+
+describe('formatTripTime', () => {
+  const now = new Date('2026-10-16T12:00:00Z'); // 5:30 pm IST
+
+  it('shows India time', () => {
+    expect(formatClockTime('2026-10-16T05:12:00Z')).toBe('10:42 am');
+  });
+
+  it('shows only the time for today in India', () => {
+    expect(formatTripTime('2026-10-16T05:12:00Z', now)).toBe('10:42 am');
+    expect(formatTripTime('2026-10-15T19:00:00Z', now)).toBe('12:30 am'); // still 16 Oct in India
+  });
+
+  it('adds the date for other days', () => {
+    expect(formatTripTime('2026-10-15T05:12:00Z', now)).toBe('15 Oct, 10:42 am');
   });
 });

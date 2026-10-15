@@ -86,3 +86,19 @@ export function formatTimeAgo(isoString: string | Date, now: Date = new Date()):
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
+
+// Trip times are shown in India time whatever the phone's time zone (SawariBuddy runs in India).
+const IST = 'Asia/Kolkata';
+
+/** "10:42 am" in India time. */
+export function formatClockTime(isoString: string | Date): string {
+  return new Date(isoString).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: IST });
+}
+
+/** "10:42 am" for today, otherwise "16 Oct, 10:42 am" (India time). */
+export function formatTripTime(isoString: string | Date, now: Date = new Date()): string {
+  const day = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: IST });
+  const at = new Date(isoString);
+  if (day(at) === day(now)) return formatClockTime(at);
+  return at.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: IST });
+}

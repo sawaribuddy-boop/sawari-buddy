@@ -1,5 +1,5 @@
 import { BOOKING_STATUS, errorMessageFor, isErrorCode, PAYMENT_STATUS, type PaymentStatus } from '@sawari/constants';
-import { formatRupees } from '@sawari/domain';
+import { formatClockTime, formatRupees } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
@@ -20,6 +20,7 @@ type Booking = {
   walk_in_label: string | null;
   total_fare_paise: number;
   payment_status: PaymentStatus | null;
+  completed_at: string | null;
 };
 
 function passengerName(b: Booking): string {
@@ -55,6 +56,7 @@ export default function TripInProgressScreen() {
   const status = trip?.status as string | undefined;
   const capacity = (trip?.capacity ?? 0) as number;
   const occupiedSeats = (activeTrip?.occupied_seats ?? 0) as number;
+  const startedAt = trip?.started_at as string | null | undefined;
 
   const handleComplete = useCallback(() => {
     if (!tripId) return;
@@ -136,6 +138,11 @@ export default function TripInProgressScreen() {
           <AppText variant="body" color={colors.green100}>
             {route?.origin} → {route?.destination}
           </AppText>
+          {startedAt ? (
+            <AppText variant="small" color={colors.green100}>
+              Started at {formatClockTime(startedAt)}
+            </AppText>
+          ) : null}
         </View>
 
         {completeTripMutation.isError ? (
@@ -206,6 +213,11 @@ export default function TripInProgressScreen() {
                   <AppText variant="small" color={colors.ink500}>
                     #{b.code} · {seats(b.seat_count)} · {formatRupees(b.total_fare_paise)}
                   </AppText>
+                  {b.completed_at ? (
+                    <AppText variant="small" color={colors.ink500}>
+                      Dropped off at {formatClockTime(b.completed_at)}
+                    </AppText>
+                  ) : null}
                 </View>
                 {b.payment_status === PAYMENT_STATUS.PAID ? (
                   <StatusPill label="Cash received" tone="success" />
