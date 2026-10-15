@@ -4,7 +4,7 @@ import { type ColorValue, View } from 'react-native';
 
 import { Icon, type IconName, Toast, type ToastMessage } from '@/components';
 import { PendingRatingPrompt } from '@/features/booking';
-import { usePassengerTripChannel } from '@/features/realtime';
+import { PassengerNoticeProvider, usePassengerTripChannel } from '@/features/realtime';
 import { colors } from '@/theme';
 
 function tabIcon(name: IconName) {
@@ -19,32 +19,34 @@ export default function PassengerLayout() {
   usePassengerTripChannel(showNotice);
 
   return (
-    <View style={{ flex: 1 }}>
-      <Tabs
-        // Back returns to the previous screen (e.g. Profile → Edit profile → Profile), not to the first tab.
-        backBehavior="history"
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.green700,
-          tabBarInactiveTintColor: colors.ink400,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          sceneStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Tabs.Screen name="book" options={{ title: 'Book', tabBarIcon: tabIcon('rickshaw') }} />
-        <Tabs.Screen name="bookings" options={{ title: 'My bookings', tabBarIcon: tabIcon('ticket-confirmation-outline') }} />
-        <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('account-circle-outline') }} />
+    <PassengerNoticeProvider show={showNotice}>
+      <View style={{ flex: 1 }}>
+        <Tabs
+          // Back returns to the previous screen (e.g. Profile → Edit profile → Profile), not to the first tab.
+          backBehavior="history"
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: colors.green700,
+            tabBarInactiveTintColor: colors.ink400,
+            tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+            sceneStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Tabs.Screen name="book" options={{ title: 'Book', tabBarIcon: tabIcon('rickshaw') }} />
+          <Tabs.Screen name="bookings" options={{ title: 'My bookings', tabBarIcon: tabIcon('ticket-confirmation-outline') }} />
+          <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('account-circle-outline') }} />
 
-        {/* Stack-pushed screens: hidden from tab bar */}
-        <Tabs.Screen name="search-results" options={{ href: null }} />
-        <Tabs.Screen name="confirm" options={{ href: null }} />
-        <Tabs.Screen name="booking-detail" options={{ href: null }} />
-        <Tabs.Screen name="edit-profile" options={{ href: null }} />
-        <Tabs.Screen name="change-password" options={{ href: null }} />
-        <Tabs.Screen name="report-problem" options={{ href: null }} />
-      </Tabs>
-      <PendingRatingPrompt />
-      <Toast message={toast} duration={6000} onDismiss={() => setToast(null)} />
-    </View>
+          {/* Stack-pushed screens: hidden from tab bar */}
+          <Tabs.Screen name="search-results" options={{ href: null }} />
+          <Tabs.Screen name="confirm" options={{ href: null }} />
+          <Tabs.Screen name="booking-detail" options={{ href: null }} />
+          <Tabs.Screen name="edit-profile" options={{ href: null }} />
+          <Tabs.Screen name="change-password" options={{ href: null }} />
+          <Tabs.Screen name="report-problem" options={{ href: null }} />
+        </Tabs>
+        <PendingRatingPrompt />
+        <Toast message={toast} duration={6000} onDismiss={() => setToast(null)} />
+      </View>
+    </PassengerNoticeProvider>
   );
 }

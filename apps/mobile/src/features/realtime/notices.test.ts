@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { driverBookingNotice, passengerBookingNotice, passengerRideEndedNotice, passengerTripStartedNotice } from './notices';
+import {
+  bookingConfirmedNotice,
+  driverBookingNotice,
+  passengerBoardedNotice,
+  passengerBookingNotice,
+  passengerRideEndedNotice,
+  passengerTripStartedNotice,
+} from './notices';
 import type { BookingEvent } from './useTripChannel';
 
 const event = (overrides: Partial<BookingEvent> = {}): BookingEvent => ({
@@ -78,7 +85,7 @@ describe('passenger trip notices', () => {
     expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'IN_PROGRESS' }, ride)).toBe(
       'Your ride has started. Heading to Dream City.',
     );
-    expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'BOARDING' }, ride)).toBeNull();
+    expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'OPEN' }, ride)).toBeNull();
     expect(passengerTripStartedNotice({ trip_id: 'trip-1', status: 'IN_PROGRESS' }, {})).toBe('Your ride has started.');
   });
 
@@ -90,5 +97,25 @@ describe('passenger trip notices', () => {
     expect(passengerRideEndedNotice(done, 'booking-2', ride)).toBeNull();
     expect(passengerRideEndedNotice(event({ status: 'BOARDED' }), 'booking-1', ride)).toBeNull();
     expect(passengerRideEndedNotice(done, 'booking-1', {})).toBe('Your ride has ended.');
+  });
+});
+
+describe('boarding PIN notices', () => {
+  it('reminds the passenger of the PIN at the final call', () => {
+    expect(
+      passengerTripStartedNotice({ trip_id: 'trip-1', status: 'BOARDING' }, { driverFirstName: 'Raj', boardingPin: '4821' }),
+    ).toBe('Raj made the final call. Your boarding PIN is 4821.');
+  });
+
+  it('confirms boarding for the passenger’s own booking only', () => {
+    const boarded = event({ status: 'BOARDED', cancel_reason: null });
+    expect(passengerBoardedNotice(boarded, 'booking-1')).toBe("You're on board. Enjoy your ride!");
+    expect(passengerBoardedNotice(boarded, 'booking-2')).toBeNull();
+  });
+
+  it('gives the PIN right after booking', () => {
+    expect(bookingConfirmedNotice('0042')).toBe(
+      'Booking confirmed. Your boarding PIN is 0042. Tell it to the driver when you get in.',
+    );
   });
 });

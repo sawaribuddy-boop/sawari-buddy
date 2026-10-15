@@ -21,11 +21,11 @@ import {
   TextField,
 } from '@/components';
 import {
+  BoardWithPinCard,
   useAddWalkIn,
   useCancelTrip,
   useDriverHome,
   useFinalCall,
-  useMarkBoarded,
   useMarkNoShow,
   useRemoveWalkIn,
   useResumeTrip,
@@ -59,7 +59,6 @@ export default function TripScreen() {
   const startTripMutation = useStartTrip();
   const cancelTripMutation = useCancelTrip();
   const resumeTripMutation = useResumeTrip();
-  const markBoardedMutation = useMarkBoarded();
   const markNoShowMutation = useMarkNoShow();
   const addWalkInMutation = useAddWalkIn();
   const removeWalkInMutation = useRemoveWalkIn();
@@ -168,7 +167,6 @@ export default function TripScreen() {
     startTripMutation.isPending ||
     cancelTripMutation.isPending ||
     resumeTripMutation.isPending ||
-    markBoardedMutation.isPending ||
     markNoShowMutation.isPending ||
     addWalkInMutation.isPending ||
     removeWalkInMutation.isPending;
@@ -178,7 +176,6 @@ export default function TripScreen() {
     startTripMutation.error ??
     cancelTripMutation.error ??
     resumeTripMutation.error ??
-    markBoardedMutation.error ??
     markNoShowMutation.error ??
     addWalkInMutation.error ??
     removeWalkInMutation.error;
@@ -238,6 +235,13 @@ export default function TripScreen() {
 
         <SeatBar occupied={occupiedSeats} capacity={capacity} />
 
+        {/* App passengers board with the PIN from their app */}
+        {tripId &&
+        (status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) &&
+        bookings.some((b) => b.source === 'APP' && b.status === BOOKING_STATUS.CONFIRMED) ? (
+          <BoardWithPinCard tripId={tripId} />
+        ) : null}
+
         {/* Manifest */}
         <AppText variant="heading">Passengers</AppText>
         {bookings.length === 0 ? (
@@ -276,18 +280,13 @@ export default function TripScreen() {
             </View>
 
             <View style={styles.bookingActions}>
-              {b.status === BOOKING_STATUS.CONFIRMED ? (
-                <Button
-                  label="Mark Boarded"
-                  variant="primary"
-                  size="md"
-                  fullWidth={false}
-                  icon="check"
-                  loading={markBoardedMutation.isPending}
-                  onPress={() => markBoardedMutation.mutate(b.id)}
-                />
+              {b.status === BOOKING_STATUS.CONFIRMED && b.source === 'APP' ? (
+                <AppText variant="small" color={colors.ink500}>
+                  Waiting for PIN
+                </AppText>
               ) : null}
-              {b.status === BOOKING_STATUS.BOARDED && b.source === 'APP' && noShowAllowed ? (
+              {/* No-show is for passengers who have not boarded (mark_no_show accepts CONFIRMED only). */}
+              {b.status === BOOKING_STATUS.CONFIRMED && b.source === 'APP' && noShowAllowed ? (
                 <Button
                   label="No-show"
                   variant="ghost"

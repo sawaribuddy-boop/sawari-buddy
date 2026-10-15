@@ -15,6 +15,17 @@ select no_plan();
 \set origin '00000000-0000-4000-c000-000000000001'
 \set dest   '00000000-0000-4000-c000-000000000002'
 
+-- Test helper: the driver boards a passenger by entering the PIN shown in the passenger's app.
+create function pg_temp.board(p_booking uuid) returns text language plpgsql security definer set search_path = '' as $$
+declare r jsonb;
+begin
+  r := public.board_with_pin((select trip_id from public.bookings where id = p_booking),
+                             (select pin from public.booking_pins where booking_id = p_booking));
+  if not coalesce((r->>'ok')::boolean, false) then raise exception 'boarding failed: %', r; end if;
+  return 'BOARDED';
+end $$;
+grant execute on function pg_temp.board(uuid) to authenticated;
+
 set local role authenticated;
 
 -- Driver goes online on the route
@@ -106,8 +117,8 @@ select is((public.get_trip_manifest(:'trip_id') ->> 'available_seats')::int, 0, 
 -- Start requires every booked passenger to be resolved
 select throws_ok(format('select public.start_trip(%L)', :'trip_id'), 'P0001', 'PASSENGERS_PENDING',
                  'cannot start while an app passenger is still expected');
-select is((select status::text from public.mark_boarded(:'b_priya')), 'BOARDED', 'driver marks passenger boarded');
-select is((select status::text from public.mark_boarded(:'b_priya')), 'BOARDED', 'mark_boarded is idempotent');
+select is(pg_temp.board(:'b_priya'), 'BOARDED', 'driver boards the passenger with their PIN');
+select is(pg_temp.board(:'b_priya'), 'BOARDED', 'entering the PIN again is a no-op');
 select is((select status::text from public.start_trip(:'trip_id')), 'IN_PROGRESS', 'trip starts');
 select throws_ok(format('select public.add_walk_in(%L, 1::smallint, %L)', :'trip_id', 'cccccccc-0000-4000-8000-000000000004'),
                  'P0001', 'TRIP_NOT_ACCEPTING_WALK_INS', 'no walk-ins once departed (V1: whole-route fares)');

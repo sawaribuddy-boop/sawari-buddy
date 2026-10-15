@@ -2,13 +2,20 @@ import { Alert } from 'react-native';
 
 import { useMyActiveBooking } from '@/features/booking/useMyActiveBooking';
 
-import { passengerBookingNotice, passengerRideEndedNotice, passengerTripStartedNotice, type RideContext } from './notices';
+import {
+  passengerBoardedNotice,
+  passengerBookingNotice,
+  passengerRideEndedNotice,
+  passengerTripStartedNotice,
+  type RideContext,
+} from './notices';
 import { useTripChannel } from './useTripChannel';
 
 interface ActiveBooking {
   booking?: { id: string; trip_id: string; total_fare_paise?: number };
   route?: { destination?: string };
   driver?: { first_name?: string };
+  boarding_pin?: string | null;
 }
 
 /**
@@ -25,6 +32,7 @@ export function usePassengerTripChannel(onNotice: (text: string) => void) {
     destination: active?.route?.destination,
     driverFirstName: active?.driver?.first_name,
     totalFarePaise: booking?.total_fare_paise,
+    boardingPin: active?.boarding_pin ?? undefined,
   };
 
   useTripChannel(booking?.trip_id, {
@@ -33,6 +41,8 @@ export function usePassengerTripChannel(onNotice: (text: string) => void) {
       if (notice) Alert.alert(notice.title, notice.message);
       const ended = passengerRideEndedNotice(event, booking?.id, ride);
       if (ended) onNotice(ended);
+      const boarded = passengerBoardedNotice(event, booking?.id);
+      if (boarded) onNotice(boarded);
     },
     onTripChanged: (event) => {
       const started = passengerTripStartedNotice(event, ride);

@@ -12,6 +12,7 @@ export { NoShowCountdown, type NoShowCountdownProps } from './NoShowCountdown';
 export { OfflineBanner } from './OfflineBanner';
 export { PeriodPicker, type EarningsPeriod, type PeriodPickerProps, PERIOD_LABELS, earningsPeriod, startOfDayIST } from './PeriodPicker';
 export { type RadioListProps, type RadioOption, RadioList } from './RadioList';
+export { PinStrip, type PinStripProps } from './PinStrip';
 export { RateRideSheet, type RateRideSheetProps } from './RateRideSheet';
 export { Screen } from './Screen';
 export { SeatBar } from './SeatBar';

@@ -18,6 +18,7 @@
 | `20261008000100_remove_duplicate_booking_broadcast.sql` | Restores `book_seats` without the manual broadcast (the bookings trigger already sends `booking_changed`) |
 | `20261008000200_cash_payment_collection.sql` | `bookings.payment_status` (PENDING/PAID/UNPAID); `complete_trip` no longer posts fares; `mark_booking_payment`, `get_driver_payments_to_collect`; new trips blocked while payments are PENDING |
 | `20261010000100_whole_auto_booking.sql` | `book_seats` allows up to `max_seats_per_booking` (raised to 4) **or** the whole auto (`seat_count` = trip capacity, only while the auto is empty) |
+| `20261010000200_boarding_pin.sql` | `booking_pins` (4-digit PIN per app booking, unique per trip, passenger-only RLS); `board_with_pin`; `mark_boarded` refuses app bookings (`PIN_REQUIRED`); PIN on `get_my_booking` / `get_my_active_booking` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -163,7 +164,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `open_trip` | driver | Go Online: open a trip for an assigned auto + route |
 | `final_call` | driver | `OPEN` → `BOARDING`; sets `final_call_at`, `no_show_eligible_at` |
 | `add_walk_in` / `remove_walk_in` | driver | walk-in passengers (idempotent add) |
-| `mark_boarded` / `mark_no_show` | driver | boarding and no-show (after grace) |
+| `board_with_pin(trip, pin)` | driver | boards the app passenger whose PIN this is; 5 wrong PINs per minute, then `LOCKED` (returned, not raised, so attempts are recorded) |
+| `mark_boarded` / `mark_no_show` | driver | `mark_boarded` for walk-ins only (app passengers need their PIN); no-show after grace |
 | `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish + ledger postings |
 | `cancel_trip` | driver / admin | cancel before departure or a suspended trip |
 | `resume_trip` | driver | after being unreachable |
@@ -202,6 +204,7 @@ RLS is enabled on every table. `anon` has no table or function access. Clients (
 | trip_events / booking_events | own trips / bookings | own trips | all |
 | issues | raised by self | raised by self | all + update |
 | ride_ratings | own (writes via RPC only) | — | all (read) |
+| booking_pins | own booking's PIN | — (checked server-side by `board_with_pin`) | — |
 | ledger_* | own accounts (none in V1) | own settlement account | all (read) |
 
 Other people's personal data is never exposed through tables. Drivers see passengers' **first names** only, via `get_trip_manifest`. Passengers see drivers' first names, auto details and location only through `search_trips` / `get_my_active_booking`.

@@ -245,6 +245,11 @@ export async function markBoarded(client: AppSupabaseClient, bookingId: string) 
   return unwrap(await client.rpc('mark_boarded', { p_booking_id: bookingId }));
 }
 
+/** Driver enters the passenger's 4-digit boarding PIN; the server finds and boards that passenger. */
+export async function boardWithPin(client: AppSupabaseClient, tripId: string, pin: string) {
+  return unwrap(await client.rpc('board_with_pin', { p_trip_id: tripId, p_pin: pin }));
+}
+
 export async function markNoShow(client: AppSupabaseClient, bookingId: string) {
   return unwrap(await client.rpc('mark_no_show', { p_booking_id: bookingId }));
 }

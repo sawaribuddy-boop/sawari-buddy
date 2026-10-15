@@ -67,10 +67,17 @@ export interface RideContext {
   destination?: string;
   driverFirstName?: string;
   totalFarePaise?: number;
+  boardingPin?: string;
 }
 
-/** Toast when the driver starts the passenger's trip. */
+/** Toast when the driver starts the passenger's trip, or makes the final call before it. */
 export function passengerTripStartedNotice(event: TripEvent, ride: RideContext): string | null {
+  if (event.status === TRIP_STATUS.BOARDING) {
+    const who = ride.driverFirstName ?? 'The driver';
+    return ride.boardingPin
+      ? `${who} made the final call. Your boarding PIN is ${ride.boardingPin}.`
+      : `${who} made the final call. Please board now.`;
+  }
   if (event.status !== TRIP_STATUS.IN_PROGRESS) return null;
   return ride.destination ? `Your ride has started. Heading to ${ride.destination}.` : 'Your ride has started.';
 }
@@ -82,4 +89,15 @@ export function passengerRideEndedNotice(event: BookingEvent, myBookingId: strin
   if (!ride.totalFarePaise) return arrived;
   const to = ride.driverFirstName ? ` to ${ride.driverFirstName}` : '';
   return `${arrived} Please pay ${formatRupees(ride.totalFarePaise)} in cash${to}.`;
+}
+
+/** Toast when the driver boards the passenger with their PIN. */
+export function passengerBoardedNotice(event: BookingEvent, myBookingId: string | undefined): string | null {
+  if (!myBookingId || event.booking_id !== myBookingId || event.status !== BOOKING_STATUS.BOARDED) return null;
+  return "You're on board. Enjoy your ride!";
+}
+
+/** Toast right after booking: the PIN to give the driver. */
+export function bookingConfirmedNotice(pin: string): string {
+  return `Booking confirmed. Your boarding PIN is ${pin}. Tell it to the driver when you get in.`;
 }

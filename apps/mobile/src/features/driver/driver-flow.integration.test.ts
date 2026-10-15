@@ -189,13 +189,21 @@ describe('Step 6a driver flow (RPCs against local Supabase)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // mark_boarded
+  // Boarding with the passenger's PIN
   // -------------------------------------------------------------------------
-  it('Imran marks Priya as boarded', async () => {
-    const { data, error } = await imranClient.rpc('mark_boarded', { p_booking_id: priyaBookingId });
+  it('Imran cannot board Priya without her PIN', async () => {
+    const { error } = await imranClient.rpc('mark_boarded', { p_booking_id: priyaBookingId });
+    expect(error?.message).toBe('PIN_REQUIRED');
+  });
+
+  it('Imran boards Priya with the PIN shown in her app', async () => {
+    const { data: mine } = await priyaClient.rpc('get_my_booking', { p_booking_id: priyaBookingId });
+    const pin = (mine as { boarding_pin: string }).boarding_pin;
+    expect(pin).toMatch(/^\d{4}$/);
+
+    const { data, error } = await imranClient.rpc('board_with_pin', { p_trip_id: tripId, p_pin: pin });
     expect(error).toBeNull();
-    const booking = data as Record<string, unknown>;
-    expect(booking.status).toBe('BOARDED');
+    expect(data).toMatchObject({ ok: true, booking_id: priyaBookingId });
   });
 
   // -------------------------------------------------------------------------

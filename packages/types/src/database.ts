@@ -87,6 +87,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"booking_pins": {
+                  Row: {
+                    "booking_id": string,"created_at": string,"pin": string,"trip_id": string
+                  }
+                  Insert: {
+                    "booking_id": string,"created_at"?: string,"pin": string,"trip_id": string
+                  }
+                  Update: {
+                    "booking_id"?: string,"created_at"?: string,"pin"?: string,"trip_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "booking_pins_booking_id_fkey"
+      columns: ["booking_id"]
+isOneToOne: true
+      referencedRelation: "bookings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "booking_pins_trip_id_fkey"
+      columns: ["trip_id"]
+isOneToOne: false
+      referencedRelation: "trips"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"bookings": {
                   Row: {
                     "boarded_at": string | null,"cancel_reason": Database["public"]['Enums']["booking_cancel_reason"] | null,"cancelled_at": string | null,"cancelled_by": string | null,"code": string,"completed_at": string | null,"created_at": string,"created_by": string,"fare_per_seat_paise": number,"id": string,"idempotency_key": string,"no_show_at": string | null,"no_show_marked_by": string | null,"passenger_id": string | null,"payment_marked_at": string | null,"payment_marked_by": string | null,"payment_method": Database["public"]['Enums']["payment_method"],"payment_status": Database["public"]['Enums']["payment_status"] | null,"platform_fee_paise": number,"seat_count": number,"seat_preference": Database["public"]['Enums']["seat_preference"],"source": Database["public"]['Enums']["booking_source"],"status": Database["public"]['Enums']["booking_status"],"total_fare_paise": number,"trip_id": string,"updated_at": string,"walk_in_label": string | null
@@ -588,6 +613,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"board_with_pin":
+{ Args: { "p_pin": string,"p_trip_id": string }; Returns: Json
+                           },
 "book_seats":
 { Args: { "p_idempotency_key": string,"p_seat_count": number,"p_seat_preference"?: Database["public"]['Enums']["seat_preference"],"p_trip_id": string }; Returns: {
               "boarded_at": string | null,

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, OfflineBanner, Screen, type SeatChoice, SeatCountPicker, StopPicker } from '@/components';
+import { AppText, Banner, Button, Card, Icon, OfflineBanner, PinStrip, Screen, type SeatChoice, SeatCountPicker, StopPicker } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useMyActiveBooking } from '@/features/booking';
 import { usePlatformSettings, useRoutes, useStops } from '@/features/trip';
@@ -43,12 +43,14 @@ export default function BookScreen() {
 
   const hasActiveBooking = activeBooking != null;
   const activeBookingData = activeBooking as Record<string, unknown> | null;
+  const waitingToBoard = (activeBookingData?.booking as Record<string, unknown> | undefined)?.status === 'CONFIRMED';
+  const boardingPin = (activeBookingData?.boarding_pin as string | null | undefined) ?? null;
 
   const routesList = Array.isArray(routes) ? (routes as { id: string; origin_stop_id: string; destination_stop_id: string; fare_paise: number }[]) : [];
   const stopsMap = new Map(stopsList.map((s) => [s.id, s.name]));
 
   return (
-    <Screen scroll edges={['top']}>
+    <Screen scroll edges={['top']} footer={waitingToBoard && boardingPin ? <PinStrip pin={boardingPin} /> : undefined}>
       <View style={styles.body}>
         <OfflineBanner />
 
