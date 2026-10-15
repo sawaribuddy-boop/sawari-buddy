@@ -98,6 +98,19 @@ describe('passenger trip notices', () => {
     expect(passengerRideEndedNotice(event({ status: 'BOARDED' }), 'booking-1', ride)).toBeNull();
     expect(passengerRideEndedNotice(done, 'booking-1', {})).toBe('Your ride has ended.');
   });
+
+  it('says whether the driver recorded the fare when dropping the passenger off', () => {
+    const ride = { destination: 'Dream City', driverFirstName: 'Raj', totalFarePaise: 6000 };
+    expect(passengerRideEndedNotice(event({ status: 'COMPLETED', payment_status: 'PAID' }), 'booking-1', ride)).toBe(
+      "You've reached Dream City. Payment received. Thanks for riding!",
+    );
+    expect(passengerRideEndedNotice(event({ status: 'COMPLETED', payment_status: 'UNPAID' }), 'booking-1', ride)).toBe(
+      "You've reached Dream City. Your fare of ₹60 is marked as not paid.",
+    );
+    expect(passengerRideEndedNotice(event({ status: 'COMPLETED', payment_status: 'PENDING' }), 'booking-1', ride)).toBe(
+      "You've reached Dream City. Please pay ₹60 in cash to Raj.",
+    );
+  });
 });
 
 describe('boarding PIN notices', () => {

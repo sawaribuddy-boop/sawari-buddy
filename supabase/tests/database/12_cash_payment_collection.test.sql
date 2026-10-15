@@ -1,4 +1,5 @@
--- Cash payment collection: complete_trip leaves payment PENDING; the driver marks received / not paid.
+-- Cash payment collection: when an admin force-completes a trip with passengers still on board, their
+-- payment is PENDING and the driver marks received / not paid on the Collect payment screen.
 begin;
 create extension if not exists pgtap with schema extensions;
 grant execute on all functions in schema extensions to authenticated, anon;
@@ -8,6 +9,7 @@ select no_plan();
 \set suresh '00000000-0000-4000-a000-000000000012'
 \set priya  '00000000-0000-4000-a000-000000000021'
 \set neha   '00000000-0000-4000-a000-000000000022'
+\set admin  '00000000-0000-4000-a000-000000000001'
 \set auto1  '00000000-0000-4000-b000-000000000102'
 \set route1 '00000000-0000-4000-d000-000000000001'
 
@@ -43,7 +45,9 @@ select public.final_call(:'trip1'::uuid);
 select pg_temp.board(:'b_priya'::uuid);
 select pg_temp.board(:'b_neha'::uuid);
 select public.start_trip(:'trip1'::uuid);
-select public.complete_trip(:'trip1'::uuid);
+select set_config('request.jwt.claims', jsonb_build_object('sub', :'admin', 'role', 'authenticated')::text, true);
+select public.complete_trip(:'trip1'::uuid);  -- admin force-completes with both still on board
+select set_config('request.jwt.claims', jsonb_build_object('sub', :'raj', 'role', 'authenticated')::text, true);
 
 -- =========================================================================
 -- After completion: payment pending, nothing in the ledger, next trip blocked

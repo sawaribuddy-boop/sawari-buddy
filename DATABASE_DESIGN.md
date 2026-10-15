@@ -19,6 +19,7 @@
 | `20261008000200_cash_payment_collection.sql` | `bookings.payment_status` (PENDING/PAID/UNPAID); `complete_trip` no longer posts fares; `mark_booking_payment`, `get_driver_payments_to_collect`; new trips blocked while payments are PENDING |
 | `20261010000100_whole_auto_booking.sql` | `book_seats` allows up to `max_seats_per_booking` (raised to 4) **or** the whole auto (`seat_count` = trip capacity, only while the auto is empty) |
 | `20261010000200_boarding_pin.sql` | `booking_pins` (4-digit PIN per app booking, unique per trip, passenger-only RLS); `board_with_pin`; `mark_boarded` refuses app bookings (`PIN_REQUIRED`); PIN on `get_my_booking` / `get_my_active_booking` |
+| `20261016000100_drop_off_per_passenger.sql` | `drop_off_passenger(booking, received)`: one passenger at a time, `BOARDED` → `COMPLETED` with payment `PAID`/`UNPAID`; driver `complete_trip` refused while anyone is on board (`PASSENGERS_ON_BOARD`), admin can still force it; `get_driver_home` keeps dropped-off passengers with `payment_status`; `booking_changed` carries `payment_status` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -121,7 +122,7 @@ platform_settings (single row) 1─* settings_events
 
 **Sign convention:** positive = value credited to the holder (the platform owes them); negative = the holder owes the platform.
 
-**V1 postings (cash only)**, made by `complete_trip`. There is one transaction per completed booking, with key `booking_fare:<booking_id>`. For an app fare of ₹40 at 10%:
+**V1 postings (cash only)**, made when the driver records the cash as received (`drop_off_passenger` / `mark_booking_payment`). There is one transaction per completed booking, with key `booking_fare:<booking_id>`. For an app fare of ₹40 at 10%:
 
 | entry_type | account | amount |
 |---|---|---|
@@ -166,7 +167,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `add_walk_in` / `remove_walk_in` | driver | walk-in passengers (idempotent add) |
 | `board_with_pin(trip, pin)` | driver | boards the app passenger whose PIN this is; 5 wrong PINs per minute, then `LOCKED` (returned, not raised, so attempts are recorded) |
 | `mark_boarded` / `mark_no_show` | driver | `mark_boarded` for walk-ins only (app passengers need their PIN); no-show after grace |
-| `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish + ledger postings |
+| `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish; a driver can finish only once nobody is on board (`PASSENGERS_ON_BOARD`) |
+| `drop_off_passenger(booking, received)` | driver (own trip) | `BOARDED` → `COMPLETED` on an `IN_PROGRESS` trip with payment `PAID` (fare posted) or `UNPAID`; on a completed booking acts as `mark_booking_payment` |
 | `cancel_trip` | driver / admin | cancel before departure or a suspended trip |
 | `resume_trip` | driver | after being unreachable |
 | `go_offline` | driver | stop being online; auto-cancels an empty trip |

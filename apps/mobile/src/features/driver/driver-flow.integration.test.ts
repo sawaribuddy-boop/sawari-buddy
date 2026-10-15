@@ -217,24 +217,30 @@ describe('Step 6a driver flow (RPCs against local Supabase)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // complete_trip
+  // drop_off_passenger, then complete_trip
   // -------------------------------------------------------------------------
-  it('Imran completes the trip', async () => {
+  it('Imran cannot end the trip while passengers are on board', async () => {
+    const { error } = await imranClient.rpc('complete_trip', { p_trip_id: tripId });
+    expect(error?.message).toBe('PASSENGERS_ON_BOARD');
+  });
+
+  it('Imran drops off each passenger with the cash received', async () => {
+    const { data } = await imranClient.rpc('get_driver_home');
+    const bookings = (data as { active_trip: { bookings: { id: string; status: string }[] } }).active_trip.bookings;
+    const onBoard = bookings.filter((b) => b.status === 'BOARDED');
+    expect(onBoard.length).toBeGreaterThan(0);
+    for (const b of onBoard) {
+      const dropped = await imranClient.rpc('drop_off_passenger', { p_booking_id: b.id, p_received: true });
+      expect(dropped.error).toBeNull();
+      expect(dropped.data).toMatchObject({ status: 'COMPLETED', payment_status: 'PAID' });
+    }
+  });
+
+  it('Imran ends the trip once nobody is on board', async () => {
     const { data, error } = await imranClient.rpc('complete_trip', { p_trip_id: tripId });
     expect(error).toBeNull();
     const trip = data as Record<string, unknown>;
     expect(trip.status).toBe('COMPLETED');
-  });
-
-  it('Imran marks the cash received for every passenger', async () => {
-    const { data, error } = await imranClient.rpc('get_driver_payments_to_collect');
-    expect(error).toBeNull();
-    const toCollect = data as { pending_count: number; bookings: { id: string; payment_status: string }[] };
-    expect(toCollect.pending_count).toBeGreaterThan(0);
-    for (const b of toCollect.bookings.filter((x) => x.payment_status === 'PENDING')) {
-      const marked = await imranClient.rpc('mark_booking_payment', { p_booking_id: b.id, p_received: true });
-      expect(marked.error).toBeNull();
-    }
     const after = await imranClient.rpc('get_driver_payments_to_collect');
     expect((after.data as { pending_count: number }).pending_count).toBe(0);
   });
@@ -322,17 +328,15 @@ describe('Step 6a start_trip from OPEN (no final_call required)', () => {
     expect(startErr).toBeNull();
     expect((started as Record<string, unknown>).status).toBe('IN_PROGRESS');
 
-    // Complete
+    // Drop off the walk-in with the cash received, then end the trip.
+    const { data: home } = await rajClient.rpc('get_driver_home');
+    for (const b of (home as { active_trip: { bookings: { id: string; status: string }[] } }).active_trip.bookings) {
+      if (b.status !== 'BOARDED') continue;
+      const { error: dropErr } = await rajClient.rpc('drop_off_passenger', { p_booking_id: b.id, p_received: true });
+      expect(dropErr).toBeNull();
+    }
     const { error: completeErr } = await rajClient.rpc('complete_trip', { p_trip_id: tripId });
     expect(completeErr).toBeNull();
-
-    // Cash from the walk-in: a new trip cannot open until it is marked.
-    const { data: toCollect } = await rajClient.rpc('get_driver_payments_to_collect');
-    for (const b of (toCollect as { bookings: { id: string; payment_status: string }[] }).bookings) {
-      if (b.payment_status !== 'PENDING') continue;
-      const { error: markErr } = await rajClient.rpc('mark_booking_payment', { p_booking_id: b.id, p_received: true });
-      expect(markErr).toBeNull();
-    }
   });
 
   it('cross-driver isolation: Neha (passenger) cannot cancel Raj\'s trip', async () => {

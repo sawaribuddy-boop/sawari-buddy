@@ -67,8 +67,8 @@ select set_config('request.jwt.claims', jsonb_build_object('sub', :'raj', 'role'
 select public.final_call(:'trip1'::uuid);
 select pg_temp.board(:'priya_booking'::uuid);
 select public.start_trip(:'trip1'::uuid);
+select public.drop_off_passenger(:'priya_booking'::uuid, true);  -- dropped off, driver received the cash
 select public.complete_trip(:'trip1'::uuid);
-select public.mark_booking_payment(:'priya_booking'::uuid, true);  -- driver received the cash
 
 -- =========================================================================
 -- get_my_booking_history: Priya sees her own bookings

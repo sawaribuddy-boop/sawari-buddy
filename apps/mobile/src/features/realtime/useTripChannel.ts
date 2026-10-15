@@ -1,4 +1,4 @@
-import type { BookingSource, BookingStatus, TripStatus } from '@sawari/constants';
+import type { BookingSource, BookingStatus, PaymentStatus, TripStatus } from '@sawari/constants';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useRef } from 'react';
 
@@ -15,6 +15,8 @@ export interface BookingEvent {
   seat_count: number;
   /** Null unless CANCELLED. Missing on servers without the 20260930000100 migration. */
   cancel_reason?: string | null;
+  /** Set once COMPLETED. Missing on servers without the 20261016000100 migration. */
+  payment_status?: PaymentStatus | null;
   available_seats: number;
 }
 

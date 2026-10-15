@@ -193,6 +193,11 @@ export async function completeTrip(client: AppSupabaseClient, tripId: string) {
   return unwrap(await client.rpc('complete_trip', { p_trip_id: tripId }));
 }
 
+/** Driver drops off one passenger on an in-progress trip, recording whether they paid the cash fare. */
+export async function dropOffPassenger(client: AppSupabaseClient, bookingId: string, received: boolean) {
+  return unwrap(await client.rpc('drop_off_passenger', { p_booking_id: bookingId, p_received: received }));
+}
+
 /** Driver confirms whether a completed passenger paid the cash fare. */
 export async function markBookingPayment(client: AppSupabaseClient, bookingId: string, received: boolean) {
   return unwrap(await client.rpc('mark_booking_payment', { p_booking_id: bookingId, p_received: received }));

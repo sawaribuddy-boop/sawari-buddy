@@ -189,19 +189,17 @@ async function main() {
     process.exit(0);
   }
 
-  // 8. Complete trip
+  // 8. Drop off everyone on board with the cash received, then end the trip
+  const home = (await unwrap(supabase.rpc('get_driver_home'))) as {
+    active_trip: { bookings: { id: string; status: string }[] } | null;
+  };
+  for (const b of (home.active_trip?.bookings ?? []).filter((x) => x.status === 'BOARDED')) {
+    await unwrap(supabase.rpc('drop_off_passenger', { p_booking_id: b.id, p_received: true }));
+  }
+  console.log('Passengers dropped off, cash received.');
   console.log('Completing trip...');
   await unwrap(supabase.rpc('complete_trip', { p_trip_id: tripId }));
   console.log('Trip completed.');
-
-  // 8b. Cash collected from everyone (the driver's Collect payment screen)
-  const toCollect = (await unwrap(supabase.rpc('get_driver_payments_to_collect'))) as {
-    bookings: { id: string; payment_status: string }[];
-  };
-  for (const b of toCollect.bookings.filter((x) => x.payment_status === 'PENDING')) {
-    await unwrap(supabase.rpc('mark_booking_payment', { p_booking_id: b.id, p_received: true }));
-  }
-  console.log('Cash marked as received.');
 
   // 9. Show earnings
   const earnings = (await unwrap(supabase.rpc('driver_earnings_summary'))) as Record<string, unknown>;

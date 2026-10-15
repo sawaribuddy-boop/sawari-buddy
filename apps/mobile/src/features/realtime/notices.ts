@@ -1,4 +1,4 @@
-import { BOOKING_SOURCE, BOOKING_STATUS, TRIP_STATUS } from '@sawari/constants';
+import { BOOKING_SOURCE, BOOKING_STATUS, PAYMENT_STATUS, TRIP_STATUS } from '@sawari/constants';
 import { formatRupees } from '@sawari/domain';
 
 import type { BookingEvent, TripEvent } from './useTripChannel';
@@ -82,11 +82,15 @@ export function passengerTripStartedNotice(event: TripEvent, ride: RideContext):
   return ride.destination ? `Your ride has started. Heading to ${ride.destination}.` : 'Your ride has started.';
 }
 
-/** Toast when the passenger's own booking completes (the driver ended the trip). */
+/** Toast when the driver drops the passenger off (or the trip is ended with them on board). */
 export function passengerRideEndedNotice(event: BookingEvent, myBookingId: string | undefined, ride: RideContext): string | null {
   if (!myBookingId || event.booking_id !== myBookingId || event.status !== BOOKING_STATUS.COMPLETED) return null;
   const arrived = ride.destination ? `You've reached ${ride.destination}.` : 'Your ride has ended.';
+  if (event.payment_status === PAYMENT_STATUS.PAID) return `${arrived} Payment received. Thanks for riding!`;
   if (!ride.totalFarePaise) return arrived;
+  if (event.payment_status === PAYMENT_STATUS.UNPAID) {
+    return `${arrived} Your fare of ${formatRupees(ride.totalFarePaise)} is marked as not paid.`;
+  }
   const to = ride.driverFirstName ? ` to ${ride.driverFirstName}` : '';
   return `${arrived} Please pay ${formatRupees(ride.totalFarePaise)} in cash${to}.`;
 }

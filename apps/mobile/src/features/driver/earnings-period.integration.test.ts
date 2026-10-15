@@ -102,8 +102,8 @@ describe('Step 7b earnings period', () => {
 
     await rajClient.rpc('mark_boarded', { p_booking_id: bookingId });
     await rajClient.rpc('start_trip', { p_trip_id: tripId });
+    await rajClient.rpc('drop_off_passenger', { p_booking_id: bookingId, p_received: true });
     await rajClient.rpc('complete_trip', { p_trip_id: tripId });
-    await rajClient.rpc('mark_booking_payment', { p_booking_id: bookingId, p_received: true });
 
     const { data: earningsData } = await rajClient.rpc('driver_earnings_summary');
     const earnings = earningsData as Record<string, unknown>;
