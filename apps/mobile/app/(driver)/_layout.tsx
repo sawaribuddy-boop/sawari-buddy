@@ -34,6 +34,7 @@ export default function DriverLayout() {
         <Stack.Screen name="driver/profile" options={{ title: 'Profile' }} />
         <Stack.Screen name="driver/edit-profile" options={{ title: 'Edit profile' }} />
         <Stack.Screen name="driver/change-password" options={{ title: 'Change password' }} />
+        <Stack.Screen name="driver/change-phone" options={{ title: 'Mobile number' }} />
         <Stack.Screen name="driver/report-problem" options={{ title: 'Report a problem' }} />
         <Stack.Screen name="driver/trips" options={{ title: 'Trip history' }} />
         <Stack.Screen name="driver/collect-payment" options={{ title: 'Collect payment' }} />

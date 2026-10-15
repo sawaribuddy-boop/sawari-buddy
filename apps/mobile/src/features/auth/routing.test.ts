@@ -6,18 +6,29 @@ import { homeHref, routeGuards } from './routing';
 describe('routeGuards', () => {
   it('shows nothing while loading or on error', () => {
     for (const status of ['loading', 'error'] as const) {
-      expect(routeGuards({ status, role: 'PASSENGER' })).toEqual({ auth: false, passenger: false, driver: false });
+      expect(routeGuards({ status, role: 'PASSENGER' })).toEqual({ auth: false, verifyPhone: false, passenger: false, driver: false });
     }
   });
 
   it('allows exactly one group once resolved', () => {
-    expect(routeGuards({ status: 'signedOut', role: null })).toEqual({ auth: true, passenger: false, driver: false });
-    expect(routeGuards({ status: 'signedIn', role: 'PASSENGER' })).toEqual({ auth: false, passenger: true, driver: false });
-    expect(routeGuards({ status: 'signedIn', role: 'DRIVER' })).toEqual({ auth: false, passenger: false, driver: true });
+    expect(routeGuards({ status: 'signedOut', role: null })).toEqual({ auth: true, verifyPhone: false, passenger: false, driver: false });
+    expect(routeGuards({ status: 'signedIn', role: 'PASSENGER' })).toEqual({ auth: false, verifyPhone: false, passenger: true, driver: false });
+    expect(routeGuards({ status: 'signedIn', role: 'DRIVER' })).toEqual({ auth: false, verifyPhone: false, passenger: false, driver: true });
+  });
+
+  it('shows only phone verification until the number is verified', () => {
+    for (const role of ['PASSENGER', 'DRIVER'] as const) {
+      expect(routeGuards({ status: 'signedIn', role, needsPhone: true })).toEqual({
+        auth: false,
+        verifyPhone: true,
+        passenger: false,
+        driver: false,
+      });
+    }
   });
 
   it('never opens a mode without a role', () => {
-    expect(routeGuards({ status: 'signedIn', role: null })).toEqual({ auth: false, passenger: false, driver: false });
+    expect(routeGuards({ status: 'signedIn', role: null })).toEqual({ auth: false, verifyPhone: false, passenger: false, driver: false });
   });
 });
 
@@ -27,6 +38,7 @@ describe('homeHref', () => {
     expect(homeHref({ status: 'signedOut', role: null, hasNotice: true })).toBe('/login');
     expect(homeHref({ status: 'signedIn', role: 'PASSENGER' })).toBe('/book');
     expect(homeHref({ status: 'signedIn', role: 'DRIVER' })).toBe('/driver');
+    expect(homeHref({ status: 'signedIn', role: 'PASSENGER', needsPhone: true })).toBe('/verify-phone');
     expect(homeHref({ status: 'loading', role: null })).toBeNull();
   });
 });
@@ -36,6 +48,8 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage({ code: 'invalid_credentials' })).toBe('Email or password is incorrect.');
     expect(authErrorMessage({ code: 'user_already_exists' })).toMatch(/already exists/);
     expect(authErrorMessage({ code: 'over_request_rate_limit' })).toMatch(/Too many attempts/);
+    expect(authErrorMessage({ code: 'phone_exists' })).toBe('This mobile number is already registered to another account.');
+    expect(authErrorMessage({ code: 'over_sms_send_rate_limit' })).toMatch(/Too many attempts/);
   });
 
   it('recognises network failures', () => {

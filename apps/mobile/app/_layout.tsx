@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AppState } from 'react-native';
 
+import { needsPhoneVerification } from '@/features/auth/account';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { routeGuards } from '@/features/auth/routing';
 import { queryClient } from '@/lib/queryClient';
@@ -30,7 +31,11 @@ export default function RootLayout() {
 // expo-router returns to the entry route, which redirects to the right home.
 function RootNavigator() {
   const { status, account } = useAuth();
-  const guards = routeGuards({ status, role: account?.role ?? null });
+  const guards = routeGuards({
+    status,
+    role: account?.role ?? null,
+    needsPhone: needsPhoneVerification(account),
+  });
 
   return (
     <>
@@ -40,6 +45,10 @@ function RootNavigator() {
 
         <Stack.Protected guard={guards.auth}>
           <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={guards.verifyPhone}>
+          <Stack.Screen name="verify-phone" />
         </Stack.Protected>
 
         <Stack.Protected guard={guards.passenger}>

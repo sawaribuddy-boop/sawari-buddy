@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, BrandMark, Button, Screen } from '@/components';
+import { needsPhoneVerification } from '@/features/auth/account';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { homeHref } from '@/features/auth/routing';
 import { colors, spacing } from '@/theme';
@@ -11,7 +12,12 @@ import { colors, spacing } from '@/theme';
 // sends the user to Welcome (or Log in with a notice), the passenger home, or the driver home.
 export default function Index() {
   const { status, account, notice, errorMessage, retry, signOut } = useAuth();
-  const href = homeHref({ status, role: account?.role ?? null, hasNotice: notice !== null });
+  const href = homeHref({
+    status,
+    role: account?.role ?? null,
+    hasNotice: notice !== null,
+    needsPhone: needsPhoneVerification(account),
+  });
 
   if (href) return <Redirect href={href} />;
 

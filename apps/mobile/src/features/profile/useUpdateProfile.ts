@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 export function useUpdateProfile() {
   const { account, refreshAccount } = useAuth();
   return useMutation({
-    mutationFn: (changes: { fullName: string; phone: string | null }) => {
+    mutationFn: (changes: { fullName: string }) => {
       if (!supabase || !account) throw new Error('Supabase not configured');
       return updateMyProfile(supabase, account.userId, changes);
     },

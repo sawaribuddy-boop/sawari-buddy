@@ -20,8 +20,13 @@ export function authErrorMessage(error: AuthErrorLike | null | undefined): strin
       return 'Please choose a stronger password.';
     case 'email_address_invalid':
       return 'Enter a valid email address.';
+    case 'phone_exists':
+      return 'This mobile number is already registered to another account.';
+    case 'sms_send_failed':
+      return "Couldn't send the SMS. Check the number and try again.";
     case 'over_request_rate_limit':
     case 'over_email_send_rate_limit':
+    case 'over_sms_send_rate_limit':
       return 'Too many attempts. Please wait a minute and try again.';
     case 'signup_disabled':
       return 'Sign-up is currently disabled.';

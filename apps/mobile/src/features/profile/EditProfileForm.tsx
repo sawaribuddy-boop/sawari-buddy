@@ -1,4 +1,6 @@
+import { formatPhone } from '@sawari/domain';
 import { editProfileInput, fieldErrors } from '@sawari/validation';
+import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -6,19 +8,19 @@ import { AppText, Banner, Button, TextField } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { colors, spacing } from '@/theme';
 
-import { formatPhone } from './ProfileView';
 import { updateProfileErrorMessage } from './profileErrors';
 import { useUpdateProfile } from './useUpdateProfile';
 
-export function EditProfileForm({ onDone }: { onDone: () => void }) {
+/** Name is edited here; the mobile number is changed by verifying a new one (`changePhoneHref`). */
+export function EditProfileForm({ onDone, changePhoneHref }: { onDone: () => void; changePhoneHref: Href }) {
+  const router = useRouter();
   const { account } = useAuth();
   const [fullName, setFullName] = useState(account?.fullName ?? '');
-  const [phone, setPhone] = useState(account?.phone ? formatPhone(account.phone) : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const mutation = useUpdateProfile();
 
   function submit() {
-    const parsed = editProfileInput.safeParse({ fullName, phone });
+    const parsed = editProfileInput.safeParse({ fullName });
     if (!parsed.success) {
       setErrors(fieldErrors(parsed.error));
       return;
@@ -38,20 +40,30 @@ export function EditProfileForm({ onDone }: { onDone: () => void }) {
         autoCapitalize="words"
         autoComplete="name"
         textContentType="name"
-        returnKeyType="next"
-      />
-      <TextField
-        label="Mobile number"
-        value={phone}
-        onChangeText={setPhone}
-        error={errors.phone}
-        hint="Optional. Drivers and support can use it to reach you about a ride."
-        placeholder="98765 43210"
-        keyboardType="phone-pad"
-        autoComplete="tel"
-        textContentType="telephoneNumber"
         returnKeyType="done"
+        onSubmitEditing={submit}
       />
+      <View style={styles.readOnly}>
+        <AppText variant="small" color={colors.ink700}>
+          Mobile number
+        </AppText>
+        <View style={styles.phoneRow}>
+          <AppText variant="body" color={colors.ink500} style={styles.flex}>
+            {account?.phone ? formatPhone(account.phone) : 'Not added'}
+            {account?.phone && !account.phoneVerified ? ' (not verified)' : ''}
+          </AppText>
+          <Button
+            label={account?.phoneVerified ? 'Change' : 'Verify'}
+            variant="secondary"
+            size="md"
+            fullWidth={false}
+            onPress={() => router.push(changePhoneHref)}
+          />
+        </View>
+        <AppText variant="caption" color={colors.ink400}>
+          A new number is confirmed with an SMS code.
+        </AppText>
+      </View>
       <View style={styles.readOnly}>
         <AppText variant="small" color={colors.ink700}>
           Email
@@ -71,4 +83,6 @@ export function EditProfileForm({ onDone }: { onDone: () => void }) {
 const styles = StyleSheet.create({
   body: { gap: spacing.lg },
   readOnly: { gap: spacing.xxs },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  flex: { flex: 1 },
 });

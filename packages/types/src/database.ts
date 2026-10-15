@@ -337,13 +337,13 @@ isOneToOne: false
                   ]
                 },"platform_settings": {
                   Row: {
-                    "commission_bps": number,"driver_intervention_seconds": number,"driver_stale_seconds": number,"id": number,"location_update_interval_seconds": number,"max_seats_per_booking": number,"min_location_update_interval_seconds": number,"no_show_grace_seconds": number,"updated_at": string,"updated_by": string | null,"walk_in_commission_bps": number
+                    "commission_bps": number,"driver_intervention_seconds": number,"driver_stale_seconds": number,"id": number,"location_update_interval_seconds": number,"max_seats_per_booking": number,"min_location_update_interval_seconds": number,"no_show_grace_seconds": number,"phone_verification_required": boolean,"updated_at": string,"updated_by": string | null,"walk_in_commission_bps": number
                   }
                   Insert: {
-                    "commission_bps"?: number,"driver_intervention_seconds"?: number,"driver_stale_seconds"?: number,"id"?: number,"location_update_interval_seconds"?: number,"max_seats_per_booking"?: number,"min_location_update_interval_seconds"?: number,"no_show_grace_seconds"?: number,"updated_at"?: string,"updated_by"?: string | null,"walk_in_commission_bps"?: number
+                    "commission_bps"?: number,"driver_intervention_seconds"?: number,"driver_stale_seconds"?: number,"id"?: number,"location_update_interval_seconds"?: number,"max_seats_per_booking"?: number,"min_location_update_interval_seconds"?: number,"no_show_grace_seconds"?: number,"phone_verification_required"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"walk_in_commission_bps"?: number
                   }
                   Update: {
-                    "commission_bps"?: number,"driver_intervention_seconds"?: number,"driver_stale_seconds"?: number,"id"?: number,"location_update_interval_seconds"?: number,"max_seats_per_booking"?: number,"min_location_update_interval_seconds"?: number,"no_show_grace_seconds"?: number,"updated_at"?: string,"updated_by"?: string | null,"walk_in_commission_bps"?: number
+                    "commission_bps"?: number,"driver_intervention_seconds"?: number,"driver_stale_seconds"?: number,"id"?: number,"location_update_interval_seconds"?: number,"max_seats_per_booking"?: number,"min_location_update_interval_seconds"?: number,"no_show_grace_seconds"?: number,"phone_verification_required"?: boolean,"updated_at"?: string,"updated_by"?: string | null,"walk_in_commission_bps"?: number
                   }
                   Relationships: [
                     {
@@ -715,6 +715,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"check_sign_up":
+{ Args: { "p_device_id"?: string,"p_phone"?: string }; Returns: Json
+                           },
 "complete_trip":
 { Args: { "p_trip_id": string }; Returns: {
               "auto_id": string,
@@ -836,6 +839,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_my_pending_rating":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"get_my_phone_status":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_platform_settings_public":
@@ -1160,7 +1166,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "account_status": "ACTIVE"|"SUSPENDED","auto_status": "ACTIVE"|"INACTIVE","booking_cancel_reason": "PASSENGER_CANCELLED"|"TRIP_CANCELLED"|"DRIVER_UNREACHABLE"|"WALK_IN_REMOVED"|"ADMIN_CANCELLED","booking_source": "APP"|"WALK_IN","booking_status": "CONFIRMED"|"BOARDED"|"COMPLETED"|"CANCELLED"|"NO_SHOW","driver_status": "PENDING_VERIFICATION"|"ACTIVE"|"SUSPENDED","issue_kind": "DRIVER_UNREACHABLE"|"TRIP_STUCK"|"BOOKING_ISSUE"|"DRIVER_BEHAVIOUR"|"PAYMENT"|"OTHER","issue_source": "PASSENGER"|"DRIVER"|"SYSTEM","issue_status": "OPEN"|"IN_REVIEW"|"RESOLVED"|"CLOSED","ledger_account_type": "PASSENGER_CREDIT"|"DRIVER_SETTLEMENT"|"PLATFORM_REVENUE"|"PLATFORM_CASH"|"PAYMENT_CLEARING","ledger_entry_type": "PAYMENT"|"BOOKING_DEBIT"|"REFUND_CREDIT"|"ADJUSTMENT"|"DRIVER_EARNING"|"PLATFORM_FEE"|"SETTLEMENT","payment_method": "CASH","payment_status": "PENDING"|"PAID"|"UNPAID","seat_preference": "ANY"|"BACK"|"FRONT","trip_cancel_reason": "DRIVER_CANCELLED"|"DRIVER_OFFLINE"|"DRIVER_UNREACHABLE"|"ADMIN_CANCELLED","trip_status": "OPEN"|"BOARDING"|"IN_PROGRESS"|"COMPLETED"|"CANCELLED"|"SUSPENDED","user_role": "PASSENGER"|"DRIVER"|"ADMIN"
+            "account_status": "ACTIVE"|"SUSPENDED","auto_status": "ACTIVE"|"INACTIVE","booking_cancel_reason": "PASSENGER_CANCELLED"|"TRIP_CANCELLED"|"DRIVER_UNREACHABLE"|"WALK_IN_REMOVED"|"ADMIN_CANCELLED","booking_source": "APP"|"WALK_IN","booking_status": "CONFIRMED"|"BOARDED"|"COMPLETED"|"CANCELLED"|"NO_SHOW","driver_status": "PENDING_VERIFICATION"|"ACTIVE"|"SUSPENDED","issue_kind": "DRIVER_UNREACHABLE"|"TRIP_STUCK"|"BOOKING_ISSUE"|"DRIVER_BEHAVIOUR"|"PAYMENT"|"OTHER"|"ACCOUNT_DELETION","issue_source": "PASSENGER"|"DRIVER"|"SYSTEM","issue_status": "OPEN"|"IN_REVIEW"|"RESOLVED"|"CLOSED","ledger_account_type": "PASSENGER_CREDIT"|"DRIVER_SETTLEMENT"|"PLATFORM_REVENUE"|"PLATFORM_CASH"|"PAYMENT_CLEARING","ledger_entry_type": "PAYMENT"|"BOOKING_DEBIT"|"REFUND_CREDIT"|"ADJUSTMENT"|"DRIVER_EARNING"|"PLATFORM_FEE"|"SETTLEMENT","payment_method": "CASH","payment_status": "PENDING"|"PAID"|"UNPAID","seat_preference": "ANY"|"BACK"|"FRONT","trip_cancel_reason": "DRIVER_CANCELLED"|"DRIVER_OFFLINE"|"DRIVER_UNREACHABLE"|"ADMIN_CANCELLED","trip_status": "OPEN"|"BOARDING"|"IN_PROGRESS"|"COMPLETED"|"CANCELLED"|"SUSPENDED","user_role": "PASSENGER"|"DRIVER"|"ADMIN"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1276,7 +1282,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "account_status": ["ACTIVE", "SUSPENDED"],"auto_status": ["ACTIVE", "INACTIVE"],"booking_cancel_reason": ["PASSENGER_CANCELLED", "TRIP_CANCELLED", "DRIVER_UNREACHABLE", "WALK_IN_REMOVED", "ADMIN_CANCELLED"],"booking_source": ["APP", "WALK_IN"],"booking_status": ["CONFIRMED", "BOARDED", "COMPLETED", "CANCELLED", "NO_SHOW"],"driver_status": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"],"issue_kind": ["DRIVER_UNREACHABLE", "TRIP_STUCK", "BOOKING_ISSUE", "DRIVER_BEHAVIOUR", "PAYMENT", "OTHER"],"issue_source": ["PASSENGER", "DRIVER", "SYSTEM"],"issue_status": ["OPEN", "IN_REVIEW", "RESOLVED", "CLOSED"],"ledger_account_type": ["PASSENGER_CREDIT", "DRIVER_SETTLEMENT", "PLATFORM_REVENUE", "PLATFORM_CASH", "PAYMENT_CLEARING"],"ledger_entry_type": ["PAYMENT", "BOOKING_DEBIT", "REFUND_CREDIT", "ADJUSTMENT", "DRIVER_EARNING", "PLATFORM_FEE", "SETTLEMENT"],"payment_method": ["CASH"],"payment_status": ["PENDING", "PAID", "UNPAID"],"seat_preference": ["ANY", "BACK", "FRONT"],"trip_cancel_reason": ["DRIVER_CANCELLED", "DRIVER_OFFLINE", "DRIVER_UNREACHABLE", "ADMIN_CANCELLED"],"trip_status": ["OPEN", "BOARDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", "SUSPENDED"],"user_role": ["PASSENGER", "DRIVER", "ADMIN"]
+            "account_status": ["ACTIVE", "SUSPENDED"],"auto_status": ["ACTIVE", "INACTIVE"],"booking_cancel_reason": ["PASSENGER_CANCELLED", "TRIP_CANCELLED", "DRIVER_UNREACHABLE", "WALK_IN_REMOVED", "ADMIN_CANCELLED"],"booking_source": ["APP", "WALK_IN"],"booking_status": ["CONFIRMED", "BOARDED", "COMPLETED", "CANCELLED", "NO_SHOW"],"driver_status": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"],"issue_kind": ["DRIVER_UNREACHABLE", "TRIP_STUCK", "BOOKING_ISSUE", "DRIVER_BEHAVIOUR", "PAYMENT", "OTHER", "ACCOUNT_DELETION"],"issue_source": ["PASSENGER", "DRIVER", "SYSTEM"],"issue_status": ["OPEN", "IN_REVIEW", "RESOLVED", "CLOSED"],"ledger_account_type": ["PASSENGER_CREDIT", "DRIVER_SETTLEMENT", "PLATFORM_REVENUE", "PLATFORM_CASH", "PAYMENT_CLEARING"],"ledger_entry_type": ["PAYMENT", "BOOKING_DEBIT", "REFUND_CREDIT", "ADJUSTMENT", "DRIVER_EARNING", "PLATFORM_FEE", "SETTLEMENT"],"payment_method": ["CASH"],"payment_status": ["PENDING", "PAID", "UNPAID"],"seat_preference": ["ANY", "BACK", "FRONT"],"trip_cancel_reason": ["DRIVER_CANCELLED", "DRIVER_OFFLINE", "DRIVER_UNREACHABLE", "ADMIN_CANCELLED"],"trip_status": ["OPEN", "BOARDING", "IN_PROGRESS", "COMPLETED", "CANCELLED", "SUSPENDED"],"user_role": ["PASSENGER", "DRIVER", "ADMIN"]
           }
         }
 } as const

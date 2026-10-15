@@ -7,7 +7,7 @@ export default function DriverEditProfileScreen() {
   const router = useRouter();
   return (
     <Screen scroll keyboardAvoiding edges={['bottom']}>
-      <EditProfileForm onDone={() => router.back()} />
+      <EditProfileForm onDone={() => router.back()} changePhoneHref="/driver/change-phone" />
     </Screen>
   );
 }

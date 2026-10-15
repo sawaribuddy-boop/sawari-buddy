@@ -12,11 +12,22 @@ export interface Account {
   role: MobileRole;
   fullName: string;
   email: string | null;
+  /** The verified number, or (before verification was required) one saved on the profile. */
   phone: string | null;
+  phoneVerified: boolean;
+  /** The app must verify a number before anything else (platform_settings.phone_verification_required). */
+  phoneRequired: boolean;
+  /** The number typed at sign-up, to prefill verification. */
+  signupPhone: string | null;
   /** Only for drivers. */
   licenseNumber: string | null;
   /** Only for drivers. Non-ACTIVE drivers can sign in but the server refuses driver actions. */
   driverStatus: Enums<'driver_status'> | null;
+}
+
+/** Signed in, but the app stays on phone verification until a number is verified. */
+export function needsPhoneVerification(account: Account | null): boolean {
+  return !!account && account.phoneRequired && !account.phoneVerified;
 }
 
 /** Why a signed-in user is not allowed into the app. They are signed out and shown this on the login screen. */
@@ -72,6 +83,10 @@ export async function loadAccount(client: AppSupabaseClient, userId: string): Pr
     licenseNumber = driver.license_number;
   }
 
+  const { data: phoneStatus, error: phoneError } = await client.rpc('get_my_phone_status');
+  if (phoneError) return { kind: 'error', message: phoneError.message };
+  const phone = (phoneStatus ?? {}) as { required?: boolean; verified?: boolean; phone?: string | null; signup_phone?: string | null };
+
   return {
     kind: 'ok',
     account: {
@@ -79,7 +94,10 @@ export async function loadAccount(client: AppSupabaseClient, userId: string): Pr
       role: profile.role,
       fullName: profile.full_name,
       email: profile.email,
-      phone: profile.phone,
+      phone: phone.phone ?? profile.phone,
+      phoneVerified: phone.verified === true,
+      phoneRequired: phone.required === true,
+      signupPhone: phone.signup_phone ?? null,
       licenseNumber,
       driverStatus,
     },

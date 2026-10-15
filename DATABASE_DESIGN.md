@@ -21,6 +21,8 @@
 | `20261010000200_boarding_pin.sql` | `booking_pins` (4-digit PIN per app booking, unique per trip, passenger-only RLS); `board_with_pin`; `mark_boarded` refuses app bookings (`PIN_REQUIRED`); PIN on `get_my_booking` / `get_my_active_booking` |
 | `20261016000100_drop_off_per_passenger.sql` | `drop_off_passenger(booking, received)`: one passenger at a time, `BOARDED` → `COMPLETED` with payment `PAID`/`UNPAID`; driver `complete_trip` refused while anyone is on board (`PASSENGERS_ON_BOARD`), admin can still force it; `get_driver_home` keeps dropped-off passengers with `payment_status`; `booking_changed` carries `payment_status` |
 | `20261016000200_driver_rating.sql` | `get_my_driver_rating` (average, count, per-star breakdown; no comments or names); `rating_received` broadcast on the driver's private channel `driver:<id>` |
+| `20261016000300_account_deletion_issue_kind.sql` | `issue_kind` `ACCOUNT_DELETION`: the app's "Request account deletion" raises one; support deletes the account |
+| `20261016000400_phone_and_device.sql` | One account per verified mobile number and one sign-up per device: `private.signup_devices`, sign-up trigger refuses `DEVICE_ALREADY_REGISTERED` / `PHONE_ALREADY_REGISTERED`; `profiles.phone` set only from the SMS-verified `auth.users.phone` (users can no longer write it); `platform_settings.phone_verification_required` (default off) makes `require_role` refuse unverified passengers/drivers (`PHONE_NOT_VERIFIED`); `check_sign_up`, `get_my_phone_status` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -176,6 +178,8 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `driver_heartbeat(lat?, lng?, accuracy?)` | driver | liveness + latest location, throttled, broadcast to `trip:<id>` |
 | `raise_issue` | passenger / driver | complaint about own booking/trip |
 | `rate_booking(booking, stars, comment?)` | passenger | rate own `COMPLETED` booking once (`ALREADY_RATED`, `RATING_INVALID`) |
+| `check_sign_up(phone?, device_id?)` | anyone (signed out) | whether a verified account already has this number / this device already created an account (the sign-up screen's message; the sign-up trigger enforces it) |
+| `get_my_phone_status()` | passenger / driver | `required` (verification switch), `verified`, verified `phone`, and the number typed at sign-up |
 | `get_my_driver_rating()` | driver | own average stars (1 decimal, null before the first), count and count per star; never comments or who rated |
 | `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
 | `delete_my_account()` | passenger / driver | anonymise own profile (name → "Deleted user", email/phone cleared, rating comments removed), suspend, delete login; refused with an active booking/trip (`ACTIVE_BOOKING_EXISTS`, `ACTIVE_TRIP_EXISTS`) or a driver's unsettled balance (`SETTLEMENT_PENDING`) |

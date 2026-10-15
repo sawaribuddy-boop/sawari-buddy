@@ -14,6 +14,7 @@ export default function SignupScreen() {
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -22,18 +23,23 @@ export default function SignupScreen() {
 
   async function submit() {
     setFormError(null);
-    const parsed = signUpInput.safeParse({ fullName, email, password });
+    const parsed = signUpInput.safeParse({ fullName, email, phone, password });
     if (!parsed.success) {
       setErrors(fieldErrors(parsed.error));
       return;
     }
     setErrors({});
     setSubmitting(true);
-    const { error, needsConfirmation } = await signUp(parsed.data.fullName, parsed.data.email, parsed.data.password);
+    const { error, needsConfirmation } = await signUp(
+      parsed.data.fullName,
+      parsed.data.email,
+      parsed.data.phone,
+      parsed.data.password,
+    );
     setSubmitting(false);
     if (error) setFormError(error);
     else if (needsConfirmation) setCheckEmail(true); // hosted projects with email confirmation enabled
-    // Otherwise the new session routes straight to the passenger home.
+    // Otherwise the new session routes to number verification (when required) or the passenger home.
   }
 
   return (
@@ -77,6 +83,18 @@ export default function SignupScreen() {
           autoCorrect={false}
           autoComplete="email"
           textContentType="emailAddress"
+          returnKeyType="next"
+        />
+        <TextField
+          label="Mobile number"
+          value={phone}
+          onChangeText={setPhone}
+          error={errors.phone}
+          hint="One account per mobile number. We'll confirm it with an SMS code."
+          placeholder="98765 43210"
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
           returnKeyType="next"
         />
         <TextField

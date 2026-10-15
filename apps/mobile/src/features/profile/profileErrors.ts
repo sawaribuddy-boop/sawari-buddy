@@ -1,7 +1,6 @@
 // Pure helpers for the profile screens (no React Native imports, so tests can use them).
 
-/** Message for a failed profile update. 23505 = unique violation on profiles.phone. */
-export function updateProfileErrorMessage(error: { code?: string; message?: string } | null): string {
-  if (error?.code === '23505') return 'This mobile number is already used by another account.';
+/** Message for a failed profile update (the name; the phone is changed by verifying a new number). */
+export function updateProfileErrorMessage(_error: { code?: string; message?: string } | null): string {
   return 'Could not save your changes. Please try again.';
 }
