@@ -28,6 +28,17 @@ insert into public.drivers (id, license_number, status, verified_at) values (:'d
 insert into public.driver_presence (driver_id) values (:'dev');
 insert into public.auto_assignments (auto_id, driver_id) values (:'auto1', :'dev');
 
+-- Test helper: the driver boards a passenger by entering the PIN shown in the passenger's app.
+create function pg_temp.board(p_booking uuid) returns text language plpgsql security definer set search_path = '' as $$
+declare r jsonb;
+begin
+  r := public.board_with_pin((select trip_id from public.bookings where id = p_booking),
+                             (select pin from public.booking_pins where booking_id = p_booking));
+  if not coalesce((r->>'ok')::boolean, false) then raise exception 'boarding failed: %', r; end if;
+  return 'BOARDED';
+end $$;
+grant execute on function pg_temp.board(uuid) to authenticated;
+
 set local role authenticated;
 
 -- =========================================================================
@@ -78,10 +89,10 @@ select throws_ok('select public.delete_my_account()', 'P0001', 'ACTIVE_BOOKING_E
 -- The ride completes: Raj now owes the platform fee, Priya's booking is history.
 select set_config('request.jwt.claims', jsonb_build_object('sub', :'raj', 'role', 'authenticated')::text, true);
 select public.final_call(:'trip1'::uuid);
-select public.mark_boarded(:'priya_booking'::uuid);
+select pg_temp.board(:'priya_booking'::uuid);
 select public.start_trip(:'trip1'::uuid);
+select public.drop_off_passenger(:'priya_booking'::uuid, true);  -- dropped off, driver received the cash
 select public.complete_trip(:'trip1'::uuid);
-select public.mark_booking_payment(:'priya_booking'::uuid, true);  -- driver received the cash
 select throws_ok('select public.delete_my_account()', 'P0001', 'SETTLEMENT_PENDING', 'driver with an unsettled balance is refused');
 
 -- =========================================================================

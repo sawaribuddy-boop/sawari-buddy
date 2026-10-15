@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Animated, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, shadow, spacing } from '@/theme';
 
@@ -21,9 +22,11 @@ interface ToastProps {
 export function Toast({ message, duration = 3500, onDismiss }: ToastProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-40)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!message) return;
+    AccessibilityInfo.announceForAccessibility(message.text);
 
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -43,7 +46,10 @@ export function Toast({ message, duration = 3500, onDismiss }: ToastProps) {
   if (!message) return null;
 
   return (
-    <Animated.View style={[styles.container, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View
+      style={[styles.container, { top: insets.top + spacing.sm, opacity, transform: [{ translateY }] }]}
+      accessibilityLiveRegion="polite"
+    >
       <View style={styles.content}>
         {message.icon ? <Icon name={message.icon} size={20} color={colors.white} /> : null}
         <AppText variant="body" color={colors.white} style={styles.text}>
@@ -57,7 +63,6 @@ export function Toast({ message, duration = 3500, onDismiss }: ToastProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 60,
     left: spacing.lg,
     right: spacing.lg,
     zIndex: 999,

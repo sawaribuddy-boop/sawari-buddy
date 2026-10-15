@@ -4,12 +4,13 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, ListRow, OfflineBanner, Screen, SeatBar, StatusPill } from '@/components';
+import { AppText, Banner, Button, Card, Icon, ListRow, OfflineBanner, Screen, SeatBar, StarRating, StatusPill } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
 import {
   useCancelTrip,
   useDriverHome,
   useDriverPaymentsToCollect,
+  useDriverRating,
   useGoOffline,
   useHeartbeat,
   useOpenTrip,
@@ -55,6 +56,7 @@ export default function DriverHomeScreen() {
   const { account } = useAuth();
   const { data: rawHome, isLoading, refetch } = useDriverHome();
   const { data: payments } = useDriverPaymentsToCollect();
+  const { data: rating } = useDriverRating();
   const pendingPayments = payments?.pending_count ?? 0;
   const { data: routes } = useRoutes();
   const { data: stops } = useStops();
@@ -336,6 +338,34 @@ export default function DriverHomeScreen() {
           </Card>
         ) : null}
 
+        {/* Rating from passengers */}
+        {rating ? (
+          <Card>
+            <View style={styles.earningsRow}>
+              <View style={styles.flex}>
+                <AppText variant="small" color={colors.ink500}>
+                  Your rating
+                </AppText>
+                {rating.average != null ? (
+                  <View style={styles.ratingRow}>
+                    <AppText variant="heading">{rating.average.toFixed(1)}</AppText>
+                    <StarRating value={Math.round(rating.average)} size={18} />
+                  </View>
+                ) : (
+                  <AppText variant="body" color={colors.ink500}>
+                    No ratings yet
+                  </AppText>
+                )}
+              </View>
+              {rating.count > 0 ? (
+                <AppText variant="small" color={colors.ink500}>
+                  {rating.count} {rating.count === 1 ? 'rating' : 'ratings'}
+                </AppText>
+              ) : null}
+            </View>
+          </Card>
+        ) : null}
+
         {/* Profile */}
         <Card padded={false} style={styles.listCard}>
           <ListRow
@@ -369,4 +399,5 @@ const styles = StyleSheet.create({
   sectionHint: { marginBottom: spacing.md },
   earningsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   listCard: { paddingHorizontal: spacing.md },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });

@@ -12,6 +12,17 @@ select no_plan();
 \set auto   '00000000-0000-4000-b000-000000000102'
 \set route  '00000000-0000-4000-d000-000000000001'
 
+-- Test helper: the driver boards a passenger by entering the PIN shown in the passenger's app.
+create function pg_temp.board(p_booking uuid) returns text language plpgsql security definer set search_path = '' as $$
+declare r jsonb;
+begin
+  r := public.board_with_pin((select trip_id from public.bookings where id = p_booking),
+                             (select pin from public.booking_pins where booking_id = p_booking));
+  if not coalesce((r->>'ok')::boolean, false) then raise exception 'boarding failed: %', r; end if;
+  return 'BOARDED';
+end $$;
+grant execute on function pg_temp.board(uuid) to authenticated;
+
 set local role authenticated;
 
 -- ---------------- open_trip guards ----------------
@@ -49,19 +60,20 @@ set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', :'raj', 'role', 'authenticated')::text, true);
 select id as w1 from public.add_walk_in(:'trip_id', 2::smallint, 'cccccccc-0000-4000-8000-00000000b001') \gset
 select is((select platform_fee_paise from public.bookings where id = :'w1'), 0::bigint, 'walk-in commission defaults to 0');
-select lives_ok(format('select public.mark_boarded(%L)', :'b_priya'), 'board app passenger');
+select lives_ok(format('select pg_temp.board(%L)', :'b_priya'), 'board app passenger with their PIN');
 select is((select status::text from public.start_trip(:'trip_id')), 'IN_PROGRESS', 'trip in progress');
 select throws_ok(format('select public.cancel_trip(%L)', :'trip_id'), 'P0001', 'INVALID_TRANSITION',
                  'driver cannot cancel an in-progress trip');
+-- Cash collected at drop-off: the driver drops off each passenger as paid, which posts the fares.
+select lives_ok(format('select public.drop_off_passenger(%L, true)', :'b_priya'), 'driver drops off the app passenger, paid');
+select throws_ok(format('select public.complete_trip(%L)', :'trip_id'), 'P0001', 'PASSENGERS_ON_BOARD',
+                 'the trip cannot end while the walk-in is still on board');
+select lives_ok(format('select public.drop_off_passenger(%L, true)', :'w1'), 'driver drops off the walk-in, paid');
 select is((select status::text from public.complete_trip(:'trip_id')), 'COMPLETED', 'trip completed');
 select is((select array_agg(distinct status::text) from public.bookings where trip_id = :'trip_id'), array['COMPLETED'],
-          'boarded passengers become COMPLETED');
+          'dropped-off passengers are COMPLETED');
 select is((select status::text from public.complete_trip(:'trip_id')), 'COMPLETED', 'complete_trip is idempotent');
 select is((select active_trip_id from public.driver_presence where driver_id = :'raj'), null, 'presence cleared after completion');
-
--- Cash collected at drop-off: the driver marks both bookings as received, which posts the fares.
-select lives_ok(format('select public.mark_booking_payment(%L, true)', :'b_priya'), 'driver marks the app passenger paid');
-select lives_ok(format('select public.mark_booking_payment(%L, true)', :'w1'), 'driver marks the walk-in paid');
 
 -- Earnings (driver's own view): app 1 x 3000 (fee 300) + walk-in 2 x 3000 (fee 0)
 select is((public.driver_earnings_summary() ->> 'earnings_paise')::bigint, 8700::bigint, 'driver earnings = 2700 + 6000');

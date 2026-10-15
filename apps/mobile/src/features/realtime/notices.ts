@@ -1,6 +1,7 @@
-import { BOOKING_SOURCE, BOOKING_STATUS } from '@sawari/constants';
+import { BOOKING_SOURCE, BOOKING_STATUS, PAYMENT_STATUS, TRIP_STATUS } from '@sawari/constants';
+import { formatRupees } from '@sawari/domain';
 
-import type { BookingEvent } from './useTripChannel';
+import type { BookingEvent, TripEvent } from './useTripChannel';
 
 export interface Notice {
   title: string;
@@ -59,4 +60,62 @@ export function driverBookingNotice(event: BookingEvent, passengerName: string |
     default:
       return null;
   }
+}
+
+/** What the passenger's app already knows about the ride (cached active booking). */
+export interface RideContext {
+  destination?: string;
+  driverFirstName?: string;
+  totalFarePaise?: number;
+  boardingPin?: string;
+}
+
+/** Toast when the driver starts the passenger's trip, or makes the final call before it. */
+export function passengerTripStartedNotice(event: TripEvent, ride: RideContext): string | null {
+  if (event.status === TRIP_STATUS.BOARDING) {
+    const who = ride.driverFirstName ?? 'The driver';
+    return ride.boardingPin
+      ? `${who} made the final call. Your boarding PIN is ${ride.boardingPin}.`
+      : `${who} made the final call. Please board now.`;
+  }
+  if (event.status !== TRIP_STATUS.IN_PROGRESS) return null;
+  return ride.destination ? `Your ride has started. Heading to ${ride.destination}.` : 'Your ride has started.';
+}
+
+/** Toast when the driver drops the passenger off (or the trip is ended with them on board). */
+export function passengerRideEndedNotice(event: BookingEvent, myBookingId: string | undefined, ride: RideContext): string | null {
+  if (!myBookingId || event.booking_id !== myBookingId || event.status !== BOOKING_STATUS.COMPLETED) return null;
+  const arrived = ride.destination ? `You've reached ${ride.destination}.` : 'Your ride has ended.';
+  if (event.payment_status === PAYMENT_STATUS.PAID) return `${arrived} Payment received. Thanks for riding!`;
+  if (!ride.totalFarePaise) return arrived;
+  if (event.payment_status === PAYMENT_STATUS.UNPAID) {
+    return `${arrived} Your fare of ${formatRupees(ride.totalFarePaise)} is marked as not paid.`;
+  }
+  const to = ride.driverFirstName ? ` to ${ride.driverFirstName}` : '';
+  return `${arrived} Please pay ${formatRupees(ride.totalFarePaise)} in cash${to}.`;
+}
+
+/** Toast when the driver boards the passenger with their PIN. */
+export function passengerBoardedNotice(event: BookingEvent, myBookingId: string | undefined): string | null {
+  if (!myBookingId || event.booking_id !== myBookingId || event.status !== BOOKING_STATUS.BOARDED) return null;
+  return "You're on board. Enjoy your ride!";
+}
+
+/** Toast right after booking: the PIN to give the driver. */
+export function bookingConfirmedNotice(pin: string): string {
+  return `Booking confirmed. Your boarding PIN is ${pin}. Tell it to the driver when you get in.`;
+}
+
+/** Payload of the `rating_received` broadcast on the driver's own channel (see private.ride_ratings_broadcast). */
+export interface RatingEvent {
+  stars: number;
+  average: number | null;
+  count: number;
+}
+
+/** Toast when a passenger rates the driver. No name or comment: drivers never see who rated. */
+export function driverRatingNotice(event: RatingEvent): string {
+  const got = `You got a new ${event.stars}★ rating.`;
+  if (event.average == null || !event.count) return got;
+  return `${got} Your average is ${event.average.toFixed(1)}★ from ${event.count} ${event.count === 1 ? 'rating' : 'ratings'}.`;
 }

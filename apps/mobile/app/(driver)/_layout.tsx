@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { Toast, type ToastMessage } from '@/components';
-import { useDriverTripChannel } from '@/features/realtime';
+import { useDriverChannel, useDriverTripChannel } from '@/features/realtime';
 import { colors } from '@/theme';
 
 export default function DriverLayout() {
@@ -11,7 +11,11 @@ export default function DriverLayout() {
   const showNotice = useCallback((text: string) => {
     setToast({ id: `${Date.now()}`, text, icon: 'account-remove-outline' });
   }, []);
+  const showRating = useCallback((text: string) => {
+    setToast({ id: `${Date.now()}`, text, icon: 'star' });
+  }, []);
   useDriverTripChannel(showNotice);
+  useDriverChannel(showRating);
 
   return (
     <View style={{ flex: 1 }}>

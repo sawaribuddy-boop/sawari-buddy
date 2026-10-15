@@ -96,8 +96,9 @@ select ok((select count(*) from public.profiles) >= 7, 'admin reads all profiles
 select is((select count(*)::int from public.trips where id in (:'trip_raj', :'trip_suresh')), 2, 'admin reads all trips');
 select is((select count(*)::int from public.platform_settings), 1, 'admin reads settings');
 select lives_ok($$insert into public.stops (name, lat, lng) values ('Admin Stop', 28.6, 77.4)$$, 'admin creates stops');
+select count(*)::int as events_before from public.settings_events \gset
 select lives_ok($$update public.platform_settings set no_show_grace_seconds = 240 where id = 1$$, 'admin updates settings');
-select is((select count(*)::int from public.settings_events), 1, 'settings changes are audited');
+select is((select count(*)::int from public.settings_events), :events_before + 1, 'settings changes are audited');
 select throws_ok($$update public.trips set status = 'CANCELLED'$$, '42501', null,
                  'even admins change trips only through RPCs');
 

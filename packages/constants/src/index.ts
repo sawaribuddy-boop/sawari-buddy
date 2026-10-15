@@ -80,6 +80,7 @@ export const ERROR_MESSAGES = {
   ALREADY_RATED: 'You have already rated this ride.',
   ACTIVE_BOOKING_EXISTS: 'Finish or cancel your current booking first.',
   PAYMENTS_PENDING: 'Mark payment for the passengers of your last trip before starting a new one.',
+  PASSENGERS_ON_BOARD: 'Drop off every passenger before ending the trip.',
   PAYMENT_ALREADY_RECEIVED: 'This payment is already recorded as received. Contact support to change it.',
   SETTLEMENT_PENDING: 'Settle your balance with SawariBuddy before deleting your account. Please contact support.',
 } as const;

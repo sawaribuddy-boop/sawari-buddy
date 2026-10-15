@@ -1,14 +1,18 @@
+export { BoardWithPinCard } from './BoardWithPinCard';
 export { useAddWalkIn } from './useAddWalkIn';
 export { useCancelTrip } from './useCancelTrip';
 export { useCompleteTrip } from './useCompleteTrip';
 export { useDriverEarnings } from './useDriverEarnings';
 export { useDriverHeartbeat } from './useDriverHeartbeat';
 export { useDriverHome } from './useDriverHome';
+export { useDriverRating } from './useDriverRating';
+export { useDropOffPassenger } from './useDropOffPassenger';
 export { type PaymentsToCollect, type PaymentToCollect, useDriverPaymentsToCollect } from './useDriverPaymentsToCollect';
 export { useFinalCall } from './useFinalCall';
 export { useGoOffline } from './useGoOffline';
 export { useHeartbeat } from './useHeartbeat';
 export type { HeartbeatState } from './useHeartbeat';
+export { type BoardWithPinResult, useBoardWithPin } from './useBoardWithPin';
 export { useMarkBoarded } from './useMarkBoarded';
 export { useMarkBookingPayment } from './useMarkBookingPayment';
 export { useMarkNoShow } from './useMarkNoShow';

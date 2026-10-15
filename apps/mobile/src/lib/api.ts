@@ -67,6 +67,18 @@ export async function fetchDriverHome(client: AppSupabaseClient) {
   return unwrap(await client.rpc('get_driver_home'));
 }
 
+/** The driver's average rating, how many ratings and how many of each star. */
+export async function fetchMyDriverRating(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('get_my_driver_rating')) as unknown as DriverRating;
+}
+
+export interface DriverRating {
+  /** Null until the first rating. */
+  average: number | null;
+  count: number;
+  by_stars: Record<'1' | '2' | '3' | '4' | '5', number>;
+}
+
 export async function fetchDriverTripHistory(
   client: AppSupabaseClient,
   opts: { limit?: number; before?: string } = {},
@@ -169,10 +181,6 @@ export async function raiseIssue(
   );
 }
 
-export async function deleteMyAccount(client: AppSupabaseClient) {
-  return unwrap(await client.rpc('delete_my_account'));
-}
-
 // ---------------------------------------------------------------------------
 // Driver mutations
 // ---------------------------------------------------------------------------
@@ -191,6 +199,11 @@ export async function startTrip(client: AppSupabaseClient, tripId: string) {
 
 export async function completeTrip(client: AppSupabaseClient, tripId: string) {
   return unwrap(await client.rpc('complete_trip', { p_trip_id: tripId }));
+}
+
+/** Driver drops off one passenger on an in-progress trip, recording whether they paid the cash fare. */
+export async function dropOffPassenger(client: AppSupabaseClient, bookingId: string, received: boolean) {
+  return unwrap(await client.rpc('drop_off_passenger', { p_booking_id: bookingId, p_received: received }));
 }
 
 /** Driver confirms whether a completed passenger paid the cash fare. */
@@ -243,6 +256,11 @@ export async function removeWalkIn(client: AppSupabaseClient, bookingId: string)
 
 export async function markBoarded(client: AppSupabaseClient, bookingId: string) {
   return unwrap(await client.rpc('mark_boarded', { p_booking_id: bookingId }));
+}
+
+/** Driver enters the passenger's 4-digit boarding PIN; the server finds and boards that passenger. */
+export async function boardWithPin(client: AppSupabaseClient, tripId: string, pin: string) {
+  return unwrap(await client.rpc('board_with_pin', { p_trip_id: tripId, p_pin: pin }));
 }
 
 export async function markNoShow(client: AppSupabaseClient, bookingId: string) {

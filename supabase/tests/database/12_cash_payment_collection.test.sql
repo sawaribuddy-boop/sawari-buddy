@@ -1,4 +1,5 @@
--- Cash payment collection: complete_trip leaves payment PENDING; the driver marks received / not paid.
+-- Cash payment collection: when an admin force-completes a trip with passengers still on board, their
+-- payment is PENDING and the driver marks received / not paid on the Collect payment screen.
 begin;
 create extension if not exists pgtap with schema extensions;
 grant execute on all functions in schema extensions to authenticated, anon;
@@ -8,8 +9,20 @@ select no_plan();
 \set suresh '00000000-0000-4000-a000-000000000012'
 \set priya  '00000000-0000-4000-a000-000000000021'
 \set neha   '00000000-0000-4000-a000-000000000022'
+\set admin  '00000000-0000-4000-a000-000000000001'
 \set auto1  '00000000-0000-4000-b000-000000000102'
 \set route1 '00000000-0000-4000-d000-000000000001'
+
+-- Test helper: the driver boards a passenger by entering the PIN shown in the passenger's app.
+create function pg_temp.board(p_booking uuid) returns text language plpgsql security definer set search_path = '' as $$
+declare r jsonb;
+begin
+  r := public.board_with_pin((select trip_id from public.bookings where id = p_booking),
+                             (select pin from public.booking_pins where booking_id = p_booking));
+  if not coalesce((r->>'ok')::boolean, false) then raise exception 'boarding failed: %', r; end if;
+  return 'BOARDED';
+end $$;
+grant execute on function pg_temp.board(uuid) to authenticated;
 
 set local role authenticated;
 
@@ -29,10 +42,12 @@ select throws_ok(format('select public.mark_booking_payment(%L, true)', :'b_priy
                  'payment cannot be marked before the ride is completed');
 
 select public.final_call(:'trip1'::uuid);
-select public.mark_boarded(:'b_priya'::uuid);
-select public.mark_boarded(:'b_neha'::uuid);
+select pg_temp.board(:'b_priya'::uuid);
+select pg_temp.board(:'b_neha'::uuid);
 select public.start_trip(:'trip1'::uuid);
-select public.complete_trip(:'trip1'::uuid);
+select set_config('request.jwt.claims', jsonb_build_object('sub', :'admin', 'role', 'authenticated')::text, true);
+select public.complete_trip(:'trip1'::uuid);  -- admin force-completes with both still on board
+select set_config('request.jwt.claims', jsonb_build_object('sub', :'raj', 'role', 'authenticated')::text, true);
 
 -- =========================================================================
 -- After completion: payment pending, nothing in the ledger, next trip blocked

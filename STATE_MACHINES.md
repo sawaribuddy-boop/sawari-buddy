@@ -44,7 +44,7 @@ A trip is one run of one auto, driven by one driver, on one route.
 | — | `OPEN` | driver `open_trip(auto_id, route_id)` | driver profile + driver record `ACTIVE`; auto `ACTIVE` and assigned to driver; route + both stops active; no active trip for driver or auto | snapshot `capacity`, `fare_paise`; presence `is_online = true`, `active_trip_id`, `last_seen_at = now()` |
 | `OPEN` | `BOARDING` | driver `final_call` | — | `final_call_at = now()`; `no_show_eligible_at = now() + no_show_grace_seconds` (snapshotted, so later setting changes don't move it). **Bookings keep their status (`CONFIRMED`).** |
 | `OPEN`/`BOARDING` | `IN_PROGRESS` | driver `start_trip` | no `CONFIRMED` bookings (`PASSENGERS_PENDING`); ≥ 1 `BOARDED` (`NO_PASSENGERS_BOARDED`) | `started_at = now()` |
-| `IN_PROGRESS` | `COMPLETED` | driver or admin `complete_trip` | — (idempotent: completing a `COMPLETED` trip returns it unchanged) | `BOARDED` bookings → `COMPLETED`; one ledger transaction per booking; presence `active_trip_id = null` |
+| `IN_PROGRESS` | `COMPLETED` | driver or admin `complete_trip` | driver: nobody still `BOARDED` (`PASSENGERS_ON_BOARD`); admin may force it (idempotent: completing a `COMPLETED` trip returns it unchanged) | admin force only: remaining `BOARDED` bookings → `COMPLETED` with payment `PENDING`; presence `active_trip_id = null` |
 | `OPEN`/`BOARDING`/`SUSPENDED` | `CANCELLED` | driver `cancel_trip` (reason `DRIVER_CANCELLED`) / admin (`ADMIN_CANCELLED` or `DRIVER_UNREACHABLE`) | — | all seat-occupying bookings → `CANCELLED` (`TRIP_CANCELLED`, or `DRIVER_UNREACHABLE`); presence `active_trip_id = null` |
 | `OPEN`/`BOARDING` | `CANCELLED` | driver `go_offline` | trip has **no** occupying bookings | reason `DRIVER_OFFLINE` |
 | `OPEN`/`BOARDING` | `CANCELLED` | job `sweep_unreachable_drivers` | driver unseen ≥ intervention threshold; trip has **no** occupying bookings | reason `DRIVER_UNREACHABLE`; driver marked offline |
@@ -65,7 +65,7 @@ Notes
 Applies to both `APP` and `WALK_IN` sources.
 
 ```
-   passenger: book_seats ─► CONFIRMED ──── driver: mark_boarded ───► BOARDED ── complete_trip ──► COMPLETED
+   passenger: book_seats ─► CONFIRMED ──── driver: board_with_pin ─► BOARDED ── drop_off ──► COMPLETED
                                │  │                                     │
                                │  └─ driver: mark_no_show ──► NO_SHOW   └─ cancel_trip (before departure) ─┐
                                │     (trip BOARDING and                   or remove_walk_in (walk-ins)     │
@@ -79,14 +79,14 @@ A passenger who is waiting to board stays **`CONFIRMED`**, before and after the 
 
 | From | To | Actor / function | Guard |
 |---|---|---|---|
-| — | `CONFIRMED` (APP) | passenger `book_seats` | trip `OPEN`; driver reachable; seats available **under trip row lock**; passenger has no other active booking; `1 ≤ seat_count ≤ max_seats_per_booking`; idempotency key |
+| — | `CONFIRMED` (APP) | passenger `book_seats` | trip `OPEN`; driver reachable; seats available **under trip row lock**; passenger has no other active booking; `1 ≤ seat_count ≤ max_seats_per_booking`, or `seat_count = capacity` (whole auto, so the auto must be empty); idempotency key |
 | — | `BOARDED` (WALK_IN) | driver `add_walk_in` | trip `OPEN`/`BOARDING`¹; seats available under the same lock; idempotency key |
-| `CONFIRMED` | `BOARDED` | driver `mark_boarded` | trip `OPEN`/`BOARDING` (idempotent) |
+| `CONFIRMED` | `BOARDED` | driver `board_with_pin` with the passenger's 4-digit PIN | trip `OPEN`/`BOARDING`; PIN matches a booking on the trip; fewer than 5 wrong PINs in the last minute (idempotent) |
 | `CONFIRMED` | `NO_SHOW` | driver `mark_no_show` | APP booking; trip `BOARDING` (`FINAL_CALL_REQUIRED`); `now() ≥ trip.no_show_eligible_at` (`GRACE_PERIOD_NOT_ELAPSED`) (idempotent) |
 | `CONFIRMED` | `CANCELLED` | passenger `cancel_booking` | own booking (idempotent) |
 | `BOARDED` (walk-in) | `CANCELLED` | driver `remove_walk_in` | trip `OPEN`/`BOARDING` |
 | `CONFIRMED`/`BOARDED` | `CANCELLED` | system, inside `cancel_trip` / sweep | — |
-| `BOARDED` | `COMPLETED` | system, inside `complete_trip` | — |
+| `BOARDED` | `COMPLETED` | driver `drop_off_passenger(booking, received)` | trip `IN_PROGRESS`; payment set to `PAID`/`UNPAID` at once (idempotent). Also admin force `complete_trip` (payment `PENDING`) |
 
 ¹ **Walk-ins during `IN_PROGRESS`**: in reality someone can hop on mid-route. V1 only allows `add_walk_in` while the trip is `OPEN` or `BOARDING`, because partial-route fares are out of scope (A3). Flagged for later.
 
@@ -98,14 +98,16 @@ A passenger who is waiting to board stays **`CONFIRMED`**, before and after the 
 ### Payment (cash, on `COMPLETED` bookings)
 
 ```
-complete_trip ─► PENDING ──── driver: mark_booking_payment(received) ────► PAID   (fare posted to the ledger)
-                    │                                                        ▲
-                    └─ driver: mark_booking_payment(not received) ─► UNPAID ─┘ (paid later)
+drop_off_passenger(received) ──────────────────────────────────────────► PAID   (fare posted to the ledger)
+drop_off_passenger(not received) ───────────────────────────► UNPAID ─┘ (paid later: mark_booking_payment / drop_off_passenger(received))
+
+admin force complete_trip ─► PENDING ── driver: mark_booking_payment(received / not received) ─► PAID / UNPAID
 ```
 
 | From | To | Actor / function | Effect |
 |---|---|---|---|
-| — | `PENDING` | system, inside `complete_trip` | nothing posted yet |
+| — | `PAID` / `UNPAID` | trip's driver `drop_off_passenger(booking, received)` | `PAID` posts the fare; `UNPAID` posts nothing |
+| — | `PENDING` | system, inside an admin force `complete_trip` | nothing posted yet |
 | `PENDING` / `UNPAID` | `PAID` | trip's driver (or admin) `mark_booking_payment(true)` | `ledger_post_booking_fare`: driver earning + platform fee owed |
 | `PENDING` | `UNPAID` | trip's driver (or admin) `mark_booking_payment(false)` | nothing posted, so no fee for unpaid rides |
 

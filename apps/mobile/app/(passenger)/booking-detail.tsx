@@ -1,7 +1,7 @@
 import { BOOKING_STATUS, type BookingStatus, errorMessageFor, isErrorCode, PAYMENT_STATUS, type PaymentStatus } from '@sawari/constants';
 import { firstName as getFirstName, formatRupees, formatTimeAgo } from '@sawari/domain';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import {
@@ -12,11 +12,14 @@ import {
   Button,
   Card,
   OfflineBanner,
+  PinStrip,
   RateRideSheet,
   Screen,
   StarRating,
+  TripTimes,
 } from '@/components';
 import { useCancelBooking, useMyActiveBooking, useMyBooking, useRateBooking } from '@/features/booking';
+import { bookingConfirmedNotice, usePassengerNotice } from '@/features/realtime';
 import { colors, spacing } from '@/theme';
 
 export default function BookingDetailScreen() {
@@ -48,6 +51,16 @@ export default function BookingDetailScreen() {
   const rating = detailData?.rating as { stars: number; comment: string | null } | null | undefined;
 
   const status = booking?.status as BookingStatus | undefined;
+  const boardingPin = (source?.boarding_pin as string | null | undefined) ?? null;
+
+  // "Notification" right after booking: the PIN to give the driver (shown once per booking).
+  const showNotice = usePassengerNotice();
+  const announcedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (justBooked !== '1' || !boardingPin || !bookingId || announcedRef.current === bookingId) return;
+    announcedRef.current = bookingId;
+    showNotice(bookingConfirmedNotice(boardingPin));
+  }, [justBooked, boardingPin, bookingId, showNotice]);
   const isActive = status === BOOKING_STATUS.CONFIRMED || status === BOOKING_STATUS.BOARDED;
 
   const handleCancel = () => {
@@ -90,13 +103,18 @@ export default function BookingDetailScreen() {
         ? getFirstName(driver.full_name as string)
         : '',
     seatCount: (booking.seat_count as number) ?? 1,
+    wholeAuto: typeof trip?.capacity === 'number' && booking.seat_count === trip.capacity,
     farePerSeatPaise: (booking.fare_per_seat_paise as number) ?? 0,
     totalFarePaise: (booking.total_fare_paise as number) ?? 0,
     seatPreference: (booking.seat_preference as string) ?? 'ANY',
   };
 
   return (
-    <Screen scroll edges={['top']}>
+    <Screen
+      scroll
+      edges={['top']}
+      footer={status === BOOKING_STATUS.CONFIRMED && boardingPin ? <PinStrip pin={boardingPin} /> : undefined}
+    >
       <View style={styles.body}>
         <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
 
@@ -131,6 +149,17 @@ export default function BookingDetailScreen() {
         ) : null}
 
         <BookingCard booking={cardData} />
+
+        <TripTimes
+          times={[
+            { label: 'Booked', at: booking.created_at as string | null },
+            { label: 'Boarded', at: booking.boarded_at as string | null },
+            { label: 'Ride started', at: trip?.started_at as string | null },
+            { label: 'Dropped off', at: booking.completed_at as string | null },
+            { label: 'Cancelled', at: booking.cancelled_at as string | null },
+            { label: 'Marked no-show', at: booking.no_show_at as string | null },
+          ]}
+        />
 
         {status === BOOKING_STATUS.CONFIRMED && !cancelMutation.isSuccess ? (
           <Button

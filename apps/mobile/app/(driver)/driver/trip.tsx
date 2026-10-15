@@ -21,17 +21,18 @@ import {
   TextField,
 } from '@/components';
 import {
+  BoardWithPinCard,
   useAddWalkIn,
   useCancelTrip,
   useDriverHome,
   useFinalCall,
-  useMarkBoarded,
   useMarkNoShow,
   useRemoveWalkIn,
   useResumeTrip,
   useStartTrip,
   useTripManifest,
 } from '@/features/driver';
+import { newIdempotencyKey } from '@/lib/ids';
 import { colors, spacing } from '@/theme';
 
 type Booking = {
@@ -58,7 +59,6 @@ export default function TripScreen() {
   const startTripMutation = useStartTrip();
   const cancelTripMutation = useCancelTrip();
   const resumeTripMutation = useResumeTrip();
-  const markBoardedMutation = useMarkBoarded();
   const markNoShowMutation = useMarkNoShow();
   const addWalkInMutation = useAddWalkIn();
   const removeWalkInMutation = useRemoveWalkIn();
@@ -92,7 +92,7 @@ export default function TripScreen() {
   const hasBoarded = bookings.some((b) => b.status === BOOKING_STATUS.BOARDED);
   const canStart = !hasConfirmed && hasBoarded;
 
-  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const idempotencyKeyRef = useRef(newIdempotencyKey());
 
   const handleAddWalkIn = useCallback(() => {
     if (!tripId) return;
@@ -108,7 +108,7 @@ export default function TripScreen() {
           setWalkInSheetVisible(false);
           setWalkInSeats(1);
           setWalkInLabel('');
-          idempotencyKeyRef.current = crypto.randomUUID();
+          idempotencyKeyRef.current = newIdempotencyKey();
         },
       },
     );
@@ -167,7 +167,6 @@ export default function TripScreen() {
     startTripMutation.isPending ||
     cancelTripMutation.isPending ||
     resumeTripMutation.isPending ||
-    markBoardedMutation.isPending ||
     markNoShowMutation.isPending ||
     addWalkInMutation.isPending ||
     removeWalkInMutation.isPending;
@@ -177,7 +176,6 @@ export default function TripScreen() {
     startTripMutation.error ??
     cancelTripMutation.error ??
     resumeTripMutation.error ??
-    markBoardedMutation.error ??
     markNoShowMutation.error ??
     addWalkInMutation.error ??
     removeWalkInMutation.error;
@@ -237,6 +235,13 @@ export default function TripScreen() {
 
         <SeatBar occupied={occupiedSeats} capacity={capacity} />
 
+        {/* App passengers board with the PIN from their app */}
+        {tripId &&
+        (status === TRIP_STATUS.OPEN || status === TRIP_STATUS.BOARDING) &&
+        bookings.some((b) => b.source === 'APP' && b.status === BOOKING_STATUS.CONFIRMED) ? (
+          <BoardWithPinCard tripId={tripId} />
+        ) : null}
+
         {/* Manifest */}
         <AppText variant="heading">Passengers</AppText>
         {bookings.length === 0 ? (
@@ -256,7 +261,9 @@ export default function TripScreen() {
                   {b.source === 'WALK_IN' ? b.walk_in_label || 'Walk-in' : b.passenger_first_name || 'Passenger'}
                 </AppText>
                 <AppText variant="small" color={colors.ink500}>
-                  {b.seat_count} {b.seat_count === 1 ? 'seat' : 'seats'}
+                  {b.source === 'APP' && capacity > 0 && b.seat_count === capacity
+                    ? `Whole auto · ${b.seat_count} seats`
+                    : `${b.seat_count} ${b.seat_count === 1 ? 'seat' : 'seats'}`}
                   {b.seat_preference && b.seat_preference !== 'ANY' ? ` · ${b.seat_preference}` : ''}
                 </AppText>
               </View>
@@ -273,18 +280,13 @@ export default function TripScreen() {
             </View>
 
             <View style={styles.bookingActions}>
-              {b.status === BOOKING_STATUS.CONFIRMED ? (
-                <Button
-                  label="Mark Boarded"
-                  variant="primary"
-                  size="md"
-                  fullWidth={false}
-                  icon="check"
-                  loading={markBoardedMutation.isPending}
-                  onPress={() => markBoardedMutation.mutate(b.id)}
-                />
+              {b.status === BOOKING_STATUS.CONFIRMED && b.source === 'APP' ? (
+                <AppText variant="small" color={colors.ink500}>
+                  Waiting for PIN
+                </AppText>
               ) : null}
-              {b.status === BOOKING_STATUS.BOARDED && b.source === 'APP' && noShowAllowed ? (
+              {/* No-show is for passengers who have not boarded (mark_no_show accepts CONFIRMED only). */}
+              {b.status === BOOKING_STATUS.CONFIRMED && b.source === 'APP' && noShowAllowed ? (
                 <Button
                   label="No-show"
                   variant="ghost"
@@ -342,7 +344,7 @@ export default function TripScreen() {
                 setWalkInSheetVisible(true);
                 setWalkInSeats(1);
                 setWalkInLabel('');
-                idempotencyKeyRef.current = crypto.randomUUID();
+                idempotencyKeyRef.current = newIdempotencyKey();
               }}
             />
           ) : null}

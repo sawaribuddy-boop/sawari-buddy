@@ -11,6 +11,7 @@ export interface DriverTripHistoryItem {
   status: 'COMPLETED' | 'CANCELLED';
   cancel_reason: string | null;
   created_at: string;
+  started_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
   origin: string;

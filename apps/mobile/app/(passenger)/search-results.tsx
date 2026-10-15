@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, OfflineBanner, Screen, type TripCardData, TripCard } from '@/components';
+import { AppText, Banner, Button, OfflineBanner, parseSeatChoice, Screen, seatChoiceLabel, type TripCardData, TripCard, tripFits } from '@/components';
 import { useSearchTrips, useStops } from '@/features/trip';
 import { colors, spacing } from '@/theme';
 
@@ -12,7 +12,9 @@ export default function SearchResultsScreen() {
     seatCount: string;
   }>();
   const router = useRouter();
-  const seatCount = Number(seatCountStr) || 1;
+  const seatChoice = parseSeatChoice(seatCountStr);
+  const wholeAuto = seatChoice === 'whole';
+  const seatsFor = (t: TripCardData) => (wholeAuto ? t.capacity : (seatChoice as number));
 
   const { data: stops } = useStops();
   const { data: trips, isLoading, isError, refetch } = useSearchTrips(originId ?? null, destinationId ?? null);
@@ -22,7 +24,10 @@ export default function SearchResultsScreen() {
   const originName = stopsMap.get(originId ?? '') ?? 'Origin';
   const destName = stopsMap.get(destinationId ?? '') ?? 'Destination';
 
-  const tripsList = Array.isArray(trips) ? (trips as TripCardData[]) : [];
+  // Autos that can take this booking first; the rest stay visible but cannot be booked.
+  const tripsList = (Array.isArray(trips) ? (trips as TripCardData[]) : [])
+    .slice()
+    .sort((a, b) => Number(tripFits(b, seatsFor(b), wholeAuto)) - Number(tripFits(a, seatsFor(a), wholeAuto)));
 
   return (
     <Screen edges={['top']} padded={false}>
@@ -41,7 +46,7 @@ export default function SearchResultsScreen() {
             {originName} → {destName}
           </AppText>
           <AppText variant="small" color={colors.ink500}>
-            {seatCount} {seatCount === 1 ? 'seat' : 'seats'} · {tripsList.length} {tripsList.length === 1 ? 'auto' : 'autos'} found
+            {seatChoiceLabel(seatChoice)} · {tripsList.length} {tripsList.length === 1 ? 'auto' : 'autos'} found
           </AppText>
         </View>
       </View>
@@ -71,13 +76,15 @@ export default function SearchResultsScreen() {
           renderItem={({ item }) => (
             <TripCard
               trip={item}
-              seatCount={seatCount}
+              seatCount={seatsFor(item)}
+              wholeAuto={wholeAuto}
               onBook={() =>
                 router.push({
                   pathname: '/(passenger)/confirm',
                   params: {
                     tripId: item.trip_id,
-                    seatCount: String(seatCount),
+                    seatCount: String(seatsFor(item)),
+                    wholeAuto: wholeAuto ? '1' : '',
                     farePaise: String(item.fare_paise),
                     autoRegistration: item.auto_registration,
                     driverFirstName: item.driver_first_name,

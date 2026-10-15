@@ -17,6 +17,10 @@
 | `20260927000700_go_online.sql`, `20260927000800_booking_broadcast.sql` | From the phase-3 i18n branch; already applied to the hosted project, added to the repo so histories match. `go_online()` kept for builds from that branch |
 | `20261008000100_remove_duplicate_booking_broadcast.sql` | Restores `book_seats` without the manual broadcast (the bookings trigger already sends `booking_changed`) |
 | `20261008000200_cash_payment_collection.sql` | `bookings.payment_status` (PENDING/PAID/UNPAID); `complete_trip` no longer posts fares; `mark_booking_payment`, `get_driver_payments_to_collect`; new trips blocked while payments are PENDING |
+| `20261010000100_whole_auto_booking.sql` | `book_seats` allows up to `max_seats_per_booking` (raised to 4) **or** the whole auto (`seat_count` = trip capacity, only while the auto is empty) |
+| `20261010000200_boarding_pin.sql` | `booking_pins` (4-digit PIN per app booking, unique per trip, passenger-only RLS); `board_with_pin`; `mark_boarded` refuses app bookings (`PIN_REQUIRED`); PIN on `get_my_booking` / `get_my_active_booking` |
+| `20261016000100_drop_off_per_passenger.sql` | `drop_off_passenger(booking, received)`: one passenger at a time, `BOARDED` → `COMPLETED` with payment `PAID`/`UNPAID`; driver `complete_trip` refused while anyone is on board (`PASSENGERS_ON_BOARD`), admin can still force it; `get_driver_home` keeps dropped-off passengers with `payment_status`; `booking_changed` carries `payment_status` |
+| `20261016000200_driver_rating.sql` | `get_my_driver_rating` (average, count, per-star breakdown; no comments or names); `rating_received` broadcast on the driver's private channel `driver:<id>` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -119,7 +123,7 @@ platform_settings (single row) 1─* settings_events
 
 **Sign convention:** positive = value credited to the holder (the platform owes them); negative = the holder owes the platform.
 
-**V1 postings (cash only)**, made by `complete_trip`. There is one transaction per completed booking, with key `booking_fare:<booking_id>`. For an app fare of ₹40 at 10%:
+**V1 postings (cash only)**, made when the driver records the cash as received (`drop_off_passenger` / `mark_booking_payment`). There is one transaction per completed booking, with key `booking_fare:<booking_id>`. For an app fare of ₹40 at 10%:
 
 | entry_type | account | amount |
 |---|---|---|
@@ -157,19 +161,22 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 
 | Function | Caller | Purpose |
 |---|---|---|
-| `book_seats` | passenger | concurrency-safe, idempotent booking |
+| `book_seats` | passenger | concurrency-safe, idempotent booking: 1 to `max_seats_per_booking` seats, or the whole auto (all seats of an empty auto) |
 | `cancel_booking` | passenger | `CONFIRMED` → `CANCELLED` (free in V1), idempotent |
 | `open_trip` | driver | Go Online: open a trip for an assigned auto + route |
 | `final_call` | driver | `OPEN` → `BOARDING`; sets `final_call_at`, `no_show_eligible_at` |
 | `add_walk_in` / `remove_walk_in` | driver | walk-in passengers (idempotent add) |
-| `mark_boarded` / `mark_no_show` | driver | boarding and no-show (after grace) |
-| `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish + ledger postings |
+| `board_with_pin(trip, pin)` | driver | boards the app passenger whose PIN this is; 5 wrong PINs per minute, then `LOCKED` (returned, not raised, so attempts are recorded) |
+| `mark_boarded` / `mark_no_show` | driver | `mark_boarded` for walk-ins only (app passengers need their PIN); no-show after grace |
+| `start_trip` / `complete_trip` | driver (complete: + admin) | depart / finish; a driver can finish only once nobody is on board (`PASSENGERS_ON_BOARD`) |
+| `drop_off_passenger(booking, received)` | driver (own trip) | `BOARDED` → `COMPLETED` on an `IN_PROGRESS` trip with payment `PAID` (fare posted) or `UNPAID`; on a completed booking acts as `mark_booking_payment` |
 | `cancel_trip` | driver / admin | cancel before departure or a suspended trip |
 | `resume_trip` | driver | after being unreachable |
 | `go_offline` | driver | stop being online; auto-cancels an empty trip |
 | `driver_heartbeat(lat?, lng?, accuracy?)` | driver | liveness + latest location, throttled, broadcast to `trip:<id>` |
 | `raise_issue` | passenger / driver | complaint about own booking/trip |
 | `rate_booking(booking, stars, comment?)` | passenger | rate own `COMPLETED` booking once (`ALREADY_RATED`, `RATING_INVALID`) |
+| `get_my_driver_rating()` | driver | own average stars (1 decimal, null before the first), count and count per star; never comments or who rated |
 | `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
 | `delete_my_account()` | passenger / driver | anonymise own profile (name → "Deleted user", email/phone cleared, rating comments removed), suspend, delete login; refused with an active booking/trip (`ACTIVE_BOOKING_EXISTS`, `ACTIVE_TRIP_EXISTS`) or a driver's unsettled balance (`SETTLEMENT_PENDING`) |
 | `get_driver_trip_history(limit?, before?)` | driver | own COMPLETED/CANCELLED trips, newest first, with passengers, seats, fares and fees from completed bookings |
@@ -201,12 +208,13 @@ RLS is enabled on every table. `anon` has no table or function access. Clients (
 | trip_events / booking_events | own trips / bookings | own trips | all |
 | issues | raised by self | raised by self | all + update |
 | ride_ratings | own (writes via RPC only) | — | all (read) |
+| booking_pins | own booking's PIN | — (checked server-side by `board_with_pin`) | — |
 | ledger_* | own accounts (none in V1) | own settlement account | all (read) |
 
 Other people's personal data is never exposed through tables. Drivers see passengers' **first names** only, via `get_trip_manifest`. Passengers see drivers' first names, auto details and location only through `search_trips` / `get_my_active_booking`.
 
 **Realtime:**
-- **Channels:** private broadcast channels `trip:<uuid>`.
+- **Channels:** private broadcast channels `trip:<uuid>`, and `driver:<uuid>` (the driver's own: `rating_received` with stars, new average and count; only that driver may join).
 - **Who can join:** a policy on `realtime.messages` lets in the trip's driver, passengers holding a `CONFIRMED`/`BOARDED` booking on it, and admins.
 - **Events:** `location`, `trip_changed` and `booking_changed` (which includes `available_seats`). They are emitted from inside the database transaction, so they're delivered only if it commits.
 

@@ -1,4 +1,4 @@
-import { formatRupees } from '@sawari/domain';
+import { formatClockTime, formatRupees, formatTripTime } from '@sawari/domain';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppText, Banner, Card, Icon, StatusPill } from '@/components';
@@ -6,8 +6,12 @@ import { colors, spacing } from '@/theme';
 
 import { type DriverTripHistoryItem, useDriverTripHistory } from './useDriverTripHistory';
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+/** "16 Oct, 10:20 am – 10:45 am" for a completed trip; when it was cancelled otherwise. */
+function tripTimes(trip: DriverTripHistoryItem): string {
+  if (trip.status === 'COMPLETED' && trip.started_at && trip.completed_at) {
+    return `${formatTripTime(trip.started_at)} – ${formatClockTime(trip.completed_at)}`;
+  }
+  return formatTripTime(trip.completed_at ?? trip.cancelled_at ?? trip.created_at);
 }
 
 function TripRow({ trip }: { trip: DriverTripHistoryItem }) {
@@ -18,7 +22,7 @@ function TripRow({ trip }: { trip: DriverTripHistoryItem }) {
       <View style={styles.row}>
         <View style={styles.topLine}>
           <AppText variant="caption" color={colors.ink500}>
-            {formatDateTime(trip.completed_at ?? trip.cancelled_at ?? trip.created_at)}
+            {tripTimes(trip)}
           </AppText>
           <StatusPill label={completed ? 'Completed' : 'Cancelled'} tone={completed ? 'neutral' : 'danger'} />
         </View>

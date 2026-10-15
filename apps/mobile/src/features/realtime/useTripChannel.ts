@@ -1,4 +1,4 @@
-import type { BookingSource, BookingStatus } from '@sawari/constants';
+import type { BookingSource, BookingStatus, PaymentStatus, TripStatus } from '@sawari/constants';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useRef } from 'react';
 
@@ -15,12 +15,22 @@ export interface BookingEvent {
   seat_count: number;
   /** Null unless CANCELLED. Missing on servers without the 20260930000100 migration. */
   cancel_reason?: string | null;
+  /** Set once COMPLETED. Missing on servers without the 20261016000100 migration. */
+  payment_status?: PaymentStatus | null;
   available_seats: number;
+}
+
+/** Payload of the `trip_changed` broadcast (see private.trips_broadcast). */
+export interface TripEvent {
+  trip_id: string;
+  status: TripStatus;
 }
 
 interface TripChannelOptions {
   /** Called before queries are invalidated, so cached data still shows the previous state. */
   onBookingChanged?: (event: BookingEvent) => void;
+  /** Same timing as onBookingChanged. */
+  onTripChanged?: (event: TripEvent) => void;
 }
 
 function invalidateTripQueries(tripId: string) {
@@ -52,6 +62,8 @@ export function useTripChannel(tripId: string | null | undefined, options?: Trip
   const channelRef = useRef<RealtimeChannel | null>(null);
   const onBookingChangedRef = useRef(options?.onBookingChanged);
   onBookingChangedRef.current = options?.onBookingChanged;
+  const onTripChangedRef = useRef(options?.onTripChanged);
+  onTripChangedRef.current = options?.onTripChanged;
 
   useEffect(() => {
     if (!supabase || !tripId) return;
@@ -61,7 +73,8 @@ export function useTripChannel(tripId: string | null | undefined, options?: Trip
     });
 
     channel
-      .on('broadcast', { event: 'trip_changed' }, () => {
+      .on('broadcast', { event: 'trip_changed' }, (message) => {
+        onTripChangedRef.current?.(message.payload as TripEvent);
         // Trip status changed — refetch everything that depends on trip state.
         invalidateTripQueries(tripId);
       })
