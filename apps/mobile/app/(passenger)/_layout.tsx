@@ -33,10 +33,10 @@ export default function PassengerLayout() {
           }}
         >
           <Tabs.Screen name="book" options={{ title: 'Book', tabBarIcon: tabIcon('rickshaw') }} />
-          <Tabs.Screen name="bookings" options={{ title: 'My bookings', tabBarIcon: tabIcon('ticket-confirmation-outline') }} />
           <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: tabIcon('account-circle-outline') }} />
 
           {/* Stack-pushed screens: hidden from tab bar */}
+          <Tabs.Screen name="bookings" options={{ href: null }} />
           <Tabs.Screen name="search-results" options={{ href: null }} />
           <Tabs.Screen name="confirm" options={{ href: null }} />
           <Tabs.Screen name="booking-detail" options={{ href: null }} />

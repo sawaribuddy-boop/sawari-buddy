@@ -105,3 +105,17 @@ export function passengerBoardedNotice(event: BookingEvent, myBookingId: string 
 export function bookingConfirmedNotice(pin: string): string {
   return `Booking confirmed. Your boarding PIN is ${pin}. Tell it to the driver when you get in.`;
 }
+
+/** Payload of the `rating_received` broadcast on the driver's own channel (see private.ride_ratings_broadcast). */
+export interface RatingEvent {
+  stars: number;
+  average: number | null;
+  count: number;
+}
+
+/** Toast when a passenger rates the driver. No name or comment: drivers never see who rated. */
+export function driverRatingNotice(event: RatingEvent): string {
+  const got = `You got a new ${event.stars}★ rating.`;
+  if (event.average == null || !event.count) return got;
+  return `${got} Your average is ${event.average.toFixed(1)}★ from ${event.count} ${event.count === 1 ? 'rating' : 'ratings'}.`;
+}

@@ -67,6 +67,18 @@ export async function fetchDriverHome(client: AppSupabaseClient) {
   return unwrap(await client.rpc('get_driver_home'));
 }
 
+/** The driver's average rating, how many ratings and how many of each star. */
+export async function fetchMyDriverRating(client: AppSupabaseClient) {
+  return unwrap(await client.rpc('get_my_driver_rating')) as unknown as DriverRating;
+}
+
+export interface DriverRating {
+  /** Null until the first rating. */
+  average: number | null;
+  count: number;
+  by_stars: Record<'1' | '2' | '3' | '4' | '5', number>;
+}
+
 export async function fetchDriverTripHistory(
   client: AppSupabaseClient,
   opts: { limit?: number; before?: string } = {},
@@ -167,10 +179,6 @@ export async function raiseIssue(
       p_trip_id: issue.tripId,
     }),
   );
-}
-
-export async function deleteMyAccount(client: AppSupabaseClient) {
-  return unwrap(await client.rpc('delete_my_account'));
 }
 
 // ---------------------------------------------------------------------------

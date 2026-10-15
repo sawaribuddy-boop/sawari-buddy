@@ -832,6 +832,9 @@ isOneToOne: false
 "get_my_booking_history":
 { Args: { "p_before"?: string,"p_limit"?: number }; Returns: Json
                            },
+"get_my_driver_rating":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "get_my_pending_rating":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

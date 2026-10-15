@@ -1,12 +1,10 @@
-import { errorMessageFor } from '@sawari/constants';
 import { type Href, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, Button, Card, Icon, type IconName, ListRow, SettingsSection, StatusPill, type PillTone } from '@/components';
+import { AppText, Button, Card, Icon, type IconName, ListRow, SettingsSection, StatusPill, type PillTone } from '@/components';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
-import { useDriverHome } from '@/features/driver';
+import { useDriverHome, useDriverRating } from '@/features/driver';
 import {
   APP_VERSION,
   callSupport,
@@ -56,7 +54,6 @@ export function ProfileView({ links }: ProfileViewProps) {
   const router = useRouter();
   const { account, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
-  const deleteMutation = useDeleteAccount();
   if (!account) return null;
 
   function confirmSignOut() {
@@ -71,18 +68,6 @@ export function ProfileView({ links }: ProfileViewProps) {
         },
       },
     ]);
-  }
-
-  function confirmDelete() {
-    Alert.alert(
-      'Delete your account?',
-      'Your name, email and phone number will be removed and you will be signed out. ' +
-        'Past rides stay in our records without your details. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete account', style: 'destructive', onPress: () => deleteMutation.mutate() },
-      ],
-    );
   }
 
   return (
@@ -148,17 +133,6 @@ export function ProfileView({ links }: ProfileViewProps) {
 
       <View style={styles.actions}>
         <Button label="Sign out" variant="dangerSoft" icon="logout" loading={signingOut} onPress={confirmSignOut} />
-        {deleteMutation.isError ? (
-          <Banner tone="danger" title="Could not delete your account" message={errorMessageFor(deleteMutation.error)} />
-        ) : null}
-        <Button
-          label="Delete account"
-          variant="dangerSoft"
-          icon="account-remove-outline"
-          loading={deleteMutation.isPending}
-          disabled={signingOut}
-          onPress={confirmDelete}
-        />
       </View>
     </View>
   );
@@ -166,6 +140,7 @@ export function ProfileView({ links }: ProfileViewProps) {
 
 function DriverDetails({ licenseNumber, driverStatus }: { licenseNumber: string | null; driverStatus: string | null }) {
   const { data } = useDriverHome();
+  const { data: rating } = useDriverRating();
   const auto = (data as { auto?: { registration_number: string; model: string | null; colour: string | null } | null } | null)?.auto;
   const status = driverStatus ? DRIVER_STATUS[driverStatus] : undefined;
   const autoDetails = auto ? [auto.model, auto.colour].filter(Boolean).join(' · ') : '';
@@ -182,6 +157,15 @@ function DriverDetails({ licenseNumber, driverStatus }: { licenseNumber: string 
         icon="rickshaw"
       />
       <ListRow title="Driving licence" subtitle={licenseNumber ?? 'Not on file'} icon="card-account-details-outline" />
+      <ListRow
+        title="Average rating"
+        subtitle={
+          rating?.average != null
+            ? `${rating.average.toFixed(1)}★ from ${rating.count} ${rating.count === 1 ? 'rating' : 'ratings'}`
+            : 'No ratings yet'
+        }
+        icon="star-outline"
+      />
     </SettingsSection>
   );
 }

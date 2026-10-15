@@ -20,6 +20,7 @@
 | `20261010000100_whole_auto_booking.sql` | `book_seats` allows up to `max_seats_per_booking` (raised to 4) **or** the whole auto (`seat_count` = trip capacity, only while the auto is empty) |
 | `20261010000200_boarding_pin.sql` | `booking_pins` (4-digit PIN per app booking, unique per trip, passenger-only RLS); `board_with_pin`; `mark_boarded` refuses app bookings (`PIN_REQUIRED`); PIN on `get_my_booking` / `get_my_active_booking` |
 | `20261016000100_drop_off_per_passenger.sql` | `drop_off_passenger(booking, received)`: one passenger at a time, `BOARDED` → `COMPLETED` with payment `PAID`/`UNPAID`; driver `complete_trip` refused while anyone is on board (`PASSENGERS_ON_BOARD`), admin can still force it; `get_driver_home` keeps dropped-off passengers with `payment_status`; `booking_changed` carries `payment_status` |
+| `20261016000200_driver_rating.sql` | `get_my_driver_rating` (average, count, per-star breakdown; no comments or names); `rating_received` broadcast on the driver's private channel `driver:<id>` |
 
 ## Conventions
 - **Keys:** primary keys are `uuid` (`gen_random_uuid()`), except `profiles.id` = `auth.users.id`, and the append-only logs, which use `bigint identity`.
@@ -175,6 +176,7 @@ The `bookings_capacity_guard` trigger repeats the capacity check under the same 
 | `driver_heartbeat(lat?, lng?, accuracy?)` | driver | liveness + latest location, throttled, broadcast to `trip:<id>` |
 | `raise_issue` | passenger / driver | complaint about own booking/trip |
 | `rate_booking(booking, stars, comment?)` | passenger | rate own `COMPLETED` booking once (`ALREADY_RATED`, `RATING_INVALID`) |
+| `get_my_driver_rating()` | driver | own average stars (1 decimal, null before the first), count and count per star; never comments or who rated |
 | `get_my_pending_rating()` | passenger | latest completed, unrated ride from the last 24 h (the app prompts for it), or null |
 | `delete_my_account()` | passenger / driver | anonymise own profile (name → "Deleted user", email/phone cleared, rating comments removed), suspend, delete login; refused with an active booking/trip (`ACTIVE_BOOKING_EXISTS`, `ACTIVE_TRIP_EXISTS`) or a driver's unsettled balance (`SETTLEMENT_PENDING`) |
 | `get_driver_trip_history(limit?, before?)` | driver | own COMPLETED/CANCELLED trips, newest first, with passengers, seats, fares and fees from completed bookings |
@@ -212,7 +214,7 @@ RLS is enabled on every table. `anon` has no table or function access. Clients (
 Other people's personal data is never exposed through tables. Drivers see passengers' **first names** only, via `get_trip_manifest`. Passengers see drivers' first names, auto details and location only through `search_trips` / `get_my_active_booking`.
 
 **Realtime:**
-- **Channels:** private broadcast channels `trip:<uuid>`.
+- **Channels:** private broadcast channels `trip:<uuid>`, and `driver:<uuid>` (the driver's own: `rating_received` with stars, new average and count; only that driver may join).
 - **Who can join:** a policy on `realtime.messages` lets in the trip's driver, passengers holding a `CONFIRMED`/`BOARDED` booking on it, and admins.
 - **Events:** `location`, `trip_changed` and `booking_changed` (which includes `available_seats`). They are emitted from inside the database transaction, so they're delivered only if it commits.
 

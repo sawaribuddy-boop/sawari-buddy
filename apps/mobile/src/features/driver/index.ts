@@ -5,6 +5,7 @@ export { useCompleteTrip } from './useCompleteTrip';
 export { useDriverEarnings } from './useDriverEarnings';
 export { useDriverHeartbeat } from './useDriverHeartbeat';
 export { useDriverHome } from './useDriverHome';
+export { useDriverRating } from './useDriverRating';
 export { useDropOffPassenger } from './useDropOffPassenger';
 export { type PaymentsToCollect, type PaymentToCollect, useDriverPaymentsToCollect } from './useDriverPaymentsToCollect';
 export { useFinalCall } from './useFinalCall';

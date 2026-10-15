@@ -2,7 +2,7 @@ import type { BookingStatus } from '@sawari/constants';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { AppText, Banner, type BookingHistoryRowData, BookingHistoryRow, OfflineBanner, Screen } from '@/components';
+import { AppText, Banner, type BookingHistoryRowData, BookingHistoryRow, Button, OfflineBanner, Screen } from '@/components';
 import { useMyBookingHistory } from '@/features/booking';
 import { colors, spacing } from '@/theme';
 
@@ -27,6 +27,7 @@ export default function BookingsScreen() {
   return (
     <Screen edges={['top']} padded={false}>
       <View style={styles.header}>
+        <Button label="Back" variant="ghost" icon="arrow-left" fullWidth={false} size="md" onPress={() => router.back()} />
         <AppText variant="title">My bookings</AppText>
         <OfflineBanner />
       </View>
@@ -77,7 +78,7 @@ export default function BookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   padded: { paddingHorizontal: spacing.lg },
   list: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xl },

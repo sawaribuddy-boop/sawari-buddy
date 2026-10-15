@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bookingConfirmedNotice,
   driverBookingNotice,
+  driverRatingNotice,
   passengerBoardedNotice,
   passengerBookingNotice,
   passengerRideEndedNotice,
@@ -129,6 +130,17 @@ describe('boarding PIN notices', () => {
   it('gives the PIN right after booking', () => {
     expect(bookingConfirmedNotice('0042')).toBe(
       'Booking confirmed. Your boarding PIN is 0042. Tell it to the driver when you get in.',
+    );
+  });
+});
+
+describe('driverRatingNotice', () => {
+  it('gives the stars and the new average', () => {
+    expect(driverRatingNotice({ stars: 4, average: 4.5, count: 2 })).toBe(
+      'You got a new 4★ rating. Your average is 4.5★ from 2 ratings.',
+    );
+    expect(driverRatingNotice({ stars: 5, average: 5, count: 1 })).toBe(
+      'You got a new 5★ rating. Your average is 5.0★ from 1 rating.',
     );
   });
 });
